@@ -1,0 +1,22 @@
+window.WORD_BANK = {
+  3: [
+    "ACE", "AIM", "ASH", "BOX", "DAY", "ELM", "FOX", "GEM", "ICE", "JET",
+    "KEY", "LUX", "MAP", "ORB", "OWL", "RAY", "SKY", "SUN", "VOW", "CAT", "ZAP"
+  ],
+  4: [
+    "AURA", "BEAM", "BOLT", "CALM", "DUSK", "ECHO", "FERN", "GLOW", "HAZE", "IRIS",
+    "JOLT", "LENS", "LUNA", "MINT", "NOVA", "ONYX", "PEAK", "QUIZ", "RIFT", "WAVE"
+  ],
+  5: [
+    "ALLOY", "BLOOM", "BRISK", "CHIME", "DREAM", "EMBER", "FLARE", "GLINT", "GROVE", "IVORY",
+    "JAZZY", "LASER", "MAPLE", "NEXUS", "OPERA", "PIXEL", "QUEST", "RHYME", "SOLAR", "TIGER"
+  ],
+  6: [
+    "AURORA", "BREEZE", "COSMIC", "CINDER", "DRIFTS", "FUSION", "GALAXY", "HARBOR", "JUNGLE", "LILACS",
+    "MAGNET", "NEBULA", "ORANGE", "PHOTON", "RIPPLE", "SILVER", "THRIVE", "VORTEX", "WONDER", "ZEPHYR"
+  ],
+  7: [
+    "BALANCE", "CAPTURE", "CRIMSON", "DYNAMIC", "FANTASY", "FLICKER", "GLACIER", "HARMONY", "JOURNEY", "KINGDOM",
+    "LANTERN", "MYSTERY", "ORCHARD", "PHANTOM", "RADIANT", "SEASIDE", "TRIUMPH", "UNFOLDS", "VICTORY", "WHISPER"
+  ]
+};

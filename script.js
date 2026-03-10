@@ -4,28 +4,7 @@ const KEYBOARD_STORAGE_KEY = "wordle-keyboard-visible";
 const REDUCED_MOTION_STORAGE_KEY = "wordle-reduced-motion";
 const HIGH_CONTRAST_STORAGE_KEY = "wordle-high-contrast";
 const LARGE_KEYBOARD_STORAGE_KEY = "wordle-large-keyboard";
-const WORD_BANK = {
-  3: [
-    "ACE", "AIM", "ASH", "BOX", "DAY", "ELM", "FOX", "GEM", "ICE", "JET",
-    "KEY", "LUX", "MAP", "ORB", "OWL", "RAY", "SKY", "SUN", "VOW", "CAT", "ZAP"
-  ],
-  4: [
-    "AURA", "BEAM", "BOLT", "CALM", "DUSK", "ECHO", "FERN", "GLOW", "HAZE", "IRIS",
-    "JOLT", "LENS", "LUNA", "MINT", "NOVA", "ONYX", "PEAK", "QUIZ", "RIFT", "WAVE"
-  ],
-  5: [
-    "ALLOY", "BLOOM", "BRISK", "CHIME", "DREAM", "EMBER", "FLARE", "GLINT", "GROVE", "IVORY",
-    "JAZZY", "LASER", "MAPLE", "NEXUS", "OPERA", "PIXEL", "QUEST", "RHYME", "SOLAR", "TIGER"
-  ],
-  6: [
-    "AURORA", "BREEZE", "COSMIC", "CINDER", "DRIFTS", "FUSION", "GALAXY", "HARBOR", "JUNGLE", "LILACS",
-    "MAGNET", "NEBULA", "ORANGE", "PHOTON", "RIPPLE", "SILVER", "THRIVE", "VORTEX", "WONDER", "ZEPHYR"
-  ],
-  7: [
-    "BALANCE", "CAPTURE", "CRIMSON", "DYNAMIC", "FANTASY", "FLICKER", "GLACIER", "HARMONY", "JOURNEY", "KINGDOM",
-    "LANTERN", "MYSTERY", "ORCHARD", "PHANTOM", "RADIANT", "SEASIDE", "TRIUMPH", "UNFOLDS", "VICTORY", "WHISPER"
-  ]
-};
+const WORD_BANK = window.WORD_BANK ?? {};
 
 const ROUND_FORMATS = [
   { length: 3, guesses: 5 },
@@ -50,7 +29,7 @@ const ROUND_FORMATS = [
 const keyboardLayout = [
   ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
   ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-  ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "BACK"]
+  ["Z", "X", "C", "V", "B", "N", "M"]
 ];
 
 const boardElement = document.getElementById("board");
@@ -108,8 +87,7 @@ let highContrast = loadBooleanPreference(HIGH_CONTRAST_STORAGE_KEY, false);
 let largeKeyboard = loadBooleanPreference(LARGE_KEYBOARD_STORAGE_KEY, false);
 let audioContext;
 let autoAdvanceTimeout;
-let backHoldTimeout;
-let backHoldTriggered = false;
+let autoSubmitTimeout;
 
 function loadStats() {
   const defaults = { played: 0, won: 0, streak: 0, best: 0 };
@@ -445,7 +423,7 @@ function syncKeyboardScale() {
   const keyboardBoost = largeKeyboard && isTouchDevice() ? 1.12 : 1;
   const largestRowWidth = Math.max(
     ...keyboardLayout.map((row) => {
-      const units = row.reduce((sum, key) => sum + (key === "ENTER" || key === "BACK" ? wideMultiplier : 1), 0);
+      const units = row.reduce((sum, key) => sum + 1, 0);
       return (units * baseKey) + ((row.length - 1) * baseGap);
     })
   );
@@ -504,21 +482,12 @@ function buildKeyboard() {
       button.type = "button";
       button.className = "key";
       button.dataset.key = key;
-      button.textContent = key === "BACK" ? "Back" : key;
-      if (key === "ENTER" || key === "BACK") {
-        button.classList.add("large");
-      }
+      button.textContent = key;
       button.addEventListener("click", () => {
         createRipple(button);
         playTone(320, 0.08, "triangle", 0.018);
         handleKeyPress(key);
       });
-      if (key === "BACK") {
-        button.addEventListener("pointerdown", startBackHold);
-        button.addEventListener("pointerup", cancelBackHold);
-        button.addEventListener("pointerleave", cancelBackHold);
-        button.addEventListener("pointercancel", cancelBackHold);
-      }
       rowElement.appendChild(button);
     });
 
@@ -605,6 +574,7 @@ function showHint() {
 
 function startGame() {
   window.clearTimeout(autoAdvanceTimeout);
+  window.clearTimeout(autoSubmitTimeout);
   roundConfig = pickRoundConfig();
   secretWord = pickSecretWord(roundConfig.length);
   currentRow = 0;
@@ -630,41 +600,19 @@ function startGame() {
   requestAnimationFrame(syncKeyboardScale);
 }
 
-function clearCurrentRow() {
-  if (gameOver || isAnimating) {
-    return;
-  }
-
-  const hasLetters = guesses[currentRow].some(Boolean);
-  if (!hasLetters) {
-    return;
-  }
-
-  for (let index = 0; index < roundConfig.length; index += 1) {
-    guesses[currentRow][index] = "";
-    writeTile(currentRow, index, "");
-  }
-  currentCol = 0;
-  setMessage("Row cleared.");
-  playTone(180, 0.12, "square", 0.012);
-  document.querySelector(`.board-row[data-row="${currentRow}"]`)?.classList.remove("locking");
-}
-
-function startBackHold() {
-  cancelBackHold();
-  backHoldTriggered = false;
-  backHoldTimeout = window.setTimeout(() => {
-    clearCurrentRow();
-    backHoldTriggered = true;
-  }, 450);
-}
-
-function cancelBackHold() {
-  window.clearTimeout(backHoldTimeout);
-}
-
 function getTile(row, col) {
   return boardElement.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+}
+
+function clearTileState(tile) {
+  tile.classList.remove("correct", "present", "absent");
+}
+
+function setTileState(tile, state) {
+  clearTileState(tile);
+  if (state) {
+    tile.classList.add(state);
+  }
 }
 
 function writeTile(row, col, letter) {
@@ -680,7 +628,71 @@ function writeTile(row, col, letter) {
     spawnParticles(tile, "type", 4);
     document.querySelector(".game")?.classList.add("input-active");
     window.setTimeout(() => document.querySelector(".game")?.classList.remove("input-active"), 220);
+  } else {
+    clearTileState(tile);
   }
+}
+
+function revealTypedLetter(row, col, letter, state) {
+  const tile = getTile(row, col);
+  if (!tile) {
+    return;
+  }
+
+  if (tile._liveRevealStateTimer) {
+    window.clearTimeout(tile._liveRevealStateTimer);
+  }
+  if (tile._liveRevealCleanupTimer) {
+    window.clearTimeout(tile._liveRevealCleanupTimer);
+  }
+  tile.getAnimations().forEach((animation) => animation.cancel());
+  clearTileState(tile);
+
+  if (reducedMotion) {
+    setTileState(tile, state);
+    updateKeyState(letter, state);
+    if (state === "correct" || state === "present") {
+      spawnParticles(tile, state, state === "correct" ? 6 : 4);
+    }
+    return;
+  }
+
+  tile.animate(
+    [
+      { transform: "rotateX(0deg) scale(0.96)" },
+      { transform: "rotateX(88deg) scale(1)", offset: 0.48 },
+      { transform: "rotateX(0deg) scale(1)" }
+    ],
+    {
+      duration: 460,
+      easing: "cubic-bezier(0.32, 0.78, 0.18, 1)",
+      fill: "none"
+    }
+  );
+
+  tile._liveRevealStateTimer = window.setTimeout(() => {
+    setTileState(tile, state);
+    updateKeyState(letter, state);
+    if (state === "correct" || state === "present") {
+      spawnParticles(tile, state, state === "correct" ? 6 : 4);
+    }
+  }, 220);
+
+  tile._liveRevealCleanupTimer = window.setTimeout(() => {
+    tile.style.transform = "";
+  }, 500);
+}
+
+function triggerRowReady(row) {
+  const rowElement = boardElement.children[row];
+  if (!rowElement) {
+    return;
+  }
+
+  rowElement.classList.remove("ready-submit");
+  void rowElement.offsetWidth;
+  rowElement.classList.add("ready-submit");
+  window.setTimeout(() => rowElement.classList.remove("ready-submit"), 430);
 }
 
 function handleKeyPress(key) {
@@ -692,34 +704,25 @@ function handleKeyPress(key) {
     return;
   }
 
-  if (key === "ENTER") {
-    submitGuess();
-    return;
-  }
-
-  if (key === "BACK") {
-    removeLetter();
-    return;
-  }
-
   if (!/^[A-Z]$/.test(key) || currentCol >= roundConfig.length) {
     return;
   }
 
   guesses[currentRow][currentCol] = key;
   writeTile(currentRow, currentCol, key);
+  const liveResult = scoreGuess(guesses[currentRow].map((letter) => letter || " ").join(""));
+  revealTypedLetter(currentRow, currentCol, key, liveResult[currentCol]);
   currentCol += 1;
-  setMessage(`Guess ${currentRow + 1} of ${roundConfig.guesses}.`);
-}
-
-function removeLetter() {
-  if (currentCol === 0) {
+  if (currentCol === roundConfig.length) {
+    triggerRowReady(currentRow);
+    setMessage("Locked in...");
+    window.clearTimeout(autoSubmitTimeout);
+    autoSubmitTimeout = window.setTimeout(() => {
+      void submitGuess();
+    }, 360);
     return;
   }
-
-  currentCol -= 1;
-  guesses[currentRow][currentCol] = "";
-  writeTile(currentRow, currentCol, "");
+  setMessage(`Guess ${currentRow + 1} of ${roundConfig.guesses}.`);
 }
 
 function updateRowStateClasses() {
@@ -773,28 +776,6 @@ function updateKeyState(letter, state) {
   key.classList.add(state);
 }
 
-function animateRowResult(row, guess, result) {
-  return Promise.all(result.map((state, index) => new Promise((resolve) => {
-    const tile = getTile(row, index);
-    setTimeout(() => {
-      tile.classList.add("flip");
-      window.setTimeout(() => {
-        tile.classList.remove("flip");
-        tile.classList.add(state);
-        updateKeyState(guess[index], state);
-        if (state === "correct") {
-          playTone(620 + (index * 45), 0.12, "triangle", 0.012);
-        } else if (state === "present") {
-          playTone(430 + (index * 25), 0.11, "sine", 0.01);
-        } else {
-          playTone(220 + (index * 12), 0.08, "square", 0.008);
-        }
-        resolve();
-      }, 300);
-    }, index * 180);
-  })));
-}
-
 function celebrateRow(row) {
   for (let index = 0; index < roundConfig.length; index += 1) {
     const tile = getTile(row, index);
@@ -823,17 +804,23 @@ async function submitGuess() {
   const guess = guesses[currentRow].join("");
   const result = scoreGuess(guess);
   const rowElement = boardElement.children[currentRow];
+  rowElement?.classList.remove("ready-submit");
   rowElement?.classList.add("locking");
   playTone(260, 0.12, "square", 0.016);
   window.setTimeout(() => rowElement?.classList.remove("locking"), 220);
-  isAnimating = true;
-  await animateRowResult(currentRow, guess, result);
-  isAnimating = false;
 
   result.forEach((state, index) => {
     const tile = getTile(currentRow, index);
-    if (state === "correct" || state === "present") {
-      spawnParticles(tile, state, state === "correct" ? 10 : 7);
+    setTileState(tile, state);
+    updateKeyState(guess[index], state);
+    if (state === "correct") {
+      playTone(620 + (index * 45), 0.12, "triangle", 0.012);
+      spawnParticles(tile, state, 8);
+    } else if (state === "present") {
+      playTone(430 + (index * 25), 0.11, "sine", 0.01);
+      spawnParticles(tile, state, 5);
+    } else {
+      playTone(220 + (index * 12), 0.08, "square", 0.008);
     }
   });
 
@@ -897,39 +884,25 @@ async function submitGuess() {
 
 function handlePhysicalKeyboard(event) {
   const { key } = event;
-  if (key === "Enter") {
-    playTone(320, 0.08, "triangle", 0.018);
-    handleKeyPress("ENTER");
-    return;
-  }
-
-  if (key === "Backspace") {
-    if (event.repeat && !backHoldTriggered) {
-      clearCurrentRow();
-      backHoldTriggered = true;
-      return;
-    }
-    if (!event.repeat) {
-      backHoldTriggered = false;
-      playTone(320, 0.08, "triangle", 0.018);
-    }
-    handleKeyPress("BACK");
-    return;
-  }
-
   const letter = key.toUpperCase();
-  if (/^[A-Z]$/.test(letter)) {
-    playTone(320, 0.08, "triangle", 0.018);
-    handleKeyPress(letter);
+
+  if (!/^[A-Z]$/.test(letter)) {
+    if (key.length !== 1) {
+      event.preventDefault();
+    }
+    return;
   }
+
+  if (currentCol >= roundConfig.length || gameOver || isAnimating) {
+    event.preventDefault();
+    return;
+  }
+
+  playTone(320, 0.08, "triangle", 0.018);
+  handleKeyPress(letter);
 }
 
 document.addEventListener("keydown", handlePhysicalKeyboard);
-document.addEventListener("keyup", (event) => {
-  if (event.key === "Backspace") {
-    backHoldTriggered = false;
-  }
-});
 restartButton?.addEventListener("click", () => {
   startGame();
   playChord([330, 440, 587], 0.16, "triangle", 0.018);
