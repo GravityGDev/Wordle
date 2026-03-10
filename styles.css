@@ -30,6 +30,8 @@
   --keyboard-row-gap: 0.55rem;
   --keyboard-key-gap: 0.45rem;
   --key-height: 3rem;
+  --key-font-size: 1rem;
+  --key-wide-multiplier: 1.5;
   --keyboard-scale: 1;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -63,6 +65,10 @@ body.modal-open {
 button,
 input {
   font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .app-shell {
@@ -336,6 +342,10 @@ input {
   border-color: rgba(125, 255, 184, 0.26);
 }
 
+.keyboard-hidden .keyboard-panel {
+  display: none;
+}
+
 .board {
   display: grid;
   gap: calc(var(--tile-gap) * var(--round-gap-scale));
@@ -487,12 +497,6 @@ input {
   justify-items: center;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .keyboard-panel {
-    display: none;
-  }
-}
-
 .modal.hidden,
 .hint-panel.hidden {
   display: none;
@@ -605,6 +609,8 @@ input {
   max-height: 9rem;
   overflow: auto;
   color: var(--muted);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 143, 255, 0.55) rgba(255, 255, 255, 0.06);
 }
 
 .hint-accent {
@@ -612,12 +618,163 @@ input {
   font-weight: 700;
 }
 
+.hint-scroll::-webkit-scrollbar {
+  width: 0.7rem;
+}
+
+.hint-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
+
+.hint-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(201, 143, 255, 0.8), rgba(111, 44, 255, 0.8));
+  border-radius: 999px;
+  border: 2px solid rgba(24, 12, 40, 0.95);
+}
+
+.hint-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(220, 174, 255, 0.92), rgba(132, 64, 255, 0.92));
+}
+
 .hint-scroll p {
+  position: relative;
   margin: 0 0 0.7rem;
+  padding-left: 1.1rem;
 }
 
 .hint-scroll p:last-child {
   margin-bottom: 0;
+}
+
+.hint-scroll p::before {
+  content: "";
+  position: absolute;
+  top: 0.45rem;
+  left: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: rgba(201, 143, 255, 0.9);
+  box-shadow: 0 0 10px rgba(159, 92, 255, 0.45);
+}
+
+.settings-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.help-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.help-tab {
+  border: 1px solid rgba(201, 143, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.help-tab.active {
+  color: var(--text);
+  background: linear-gradient(135deg, rgba(124, 79, 255, 0.28), rgba(159, 92, 255, 0.18));
+  border-color: rgba(201, 143, 255, 0.38);
+}
+
+.help-tab:hover,
+.help-tab:focus-visible {
+  transform: translateY(-1px);
+}
+
+.help-carousel {
+  overflow: hidden;
+}
+
+.help-track {
+  display: flex;
+  width: 200%;
+  transition: transform 280ms ease;
+}
+
+.help-track.show-controls {
+  transform: translateX(-50%);
+}
+
+.help-slide {
+  width: 50%;
+  flex: 0 0 50%;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(201, 143, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.setting-item strong,
+.setting-item small {
+  display: block;
+}
+
+.setting-item small {
+  margin-top: 0.2rem;
+  color: var(--muted);
+}
+
+.setting-toggle {
+  appearance: none;
+  width: 3.8rem;
+  height: 2.15rem;
+  border-radius: 999px;
+  background: rgba(96, 96, 112, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  position: relative;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.setting-toggle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0.22rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: #f7eeff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+  transform: translateY(-50%);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.setting-toggle:checked {
+  background: rgba(124, 79, 255, 0.92);
+  border-color: rgba(201, 143, 255, 0.5);
+  box-shadow: 0 0 0 4px rgba(124, 79, 255, 0.14);
+}
+
+.setting-toggle:checked::after {
+  transform: translate(1.6rem, -50%);
+}
+
+.setting-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(201, 143, 255, 0.18);
 }
 
 .keyboard {
@@ -637,13 +794,17 @@ input {
   width: var(--keyboard-key);
   min-width: var(--keyboard-key);
   height: var(--key-height);
-  padding: 0 0.8rem;
+  padding: 0;
   border: 0;
   border-radius: 0.95rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(68, 43, 104, 0.9));
   color: var(--text);
   cursor: pointer;
+  display: grid;
+  place-items: center;
   font-weight: 700;
+  font-size: var(--key-font-size);
+  line-height: 1;
   text-transform: uppercase;
   transition: transform 140ms ease, filter 140ms ease, box-shadow 140ms ease;
   box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
@@ -653,6 +814,12 @@ input {
 .key:focus-visible {
   transform: translateY(-1px);
   filter: brightness(1.08);
+}
+
+.key:focus,
+.key:focus-visible {
+  outline: none;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .key:active {
@@ -677,9 +844,9 @@ input {
 }
 
 .key.large {
-  width: calc(var(--keyboard-key) * 1.5);
-  min-width: calc(var(--keyboard-key) * 1.5);
-  font-size: 0.85rem;
+  width: calc(var(--keyboard-key) * var(--key-wide-multiplier));
+  min-width: calc(var(--keyboard-key) * var(--key-wide-multiplier));
+  font-size: calc(var(--key-font-size) * 0.72);
 }
 
 @keyframes floatGlow {
@@ -1068,8 +1235,8 @@ input {
   }
 
   .key.large {
-    min-width: calc(var(--keyboard-key) * 1.5);
-    width: calc(var(--keyboard-key) * 1.5);
+    min-width: calc(var(--keyboard-key) * var(--key-wide-multiplier));
+    width: calc(var(--keyboard-key) * var(--key-wide-multiplier));
     font-size: 0.72rem;
   }
 }
@@ -1153,11 +1320,12 @@ input {
 @media (orientation: portrait) and (max-width: 430px) {
   :root {
     --tile-size: 3rem;
+    --key-wide-multiplier: 1.18;
   }
 
   .keyboard-panel {
-    padding-left: 0.55rem;
-    padding-right: 0.55rem;
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
   }
 
   .status-row {

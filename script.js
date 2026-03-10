@@ -1,5 +1,6 @@
 const STORAGE_KEY = "wordle-stats";
 const SOUND_STORAGE_KEY = "wordle-sound-enabled";
+const KEYBOARD_STORAGE_KEY = "wordle-keyboard-visible";
 const WORD_BANK = {
   3: [
     "ACE", "AIM", "ASH", "BOX", "DAY", "ELM", "FOX", "GEM", "ICE", "JET",
@@ -56,9 +57,17 @@ const fxLayer = document.getElementById("fx-layer");
 const messageElement = document.getElementById("message");
 const restartButton = document.getElementById("restart-button");
 const helpButton = document.getElementById("help-button");
-const soundButton = document.getElementById("sound-button");
+const settingsButton = document.getElementById("settings-button");
 const helpModal = document.getElementById("help-modal");
 const closeHelpButton = document.getElementById("close-help-button");
+const settingsModal = document.getElementById("settings-modal");
+const closeSettingsButton = document.getElementById("close-settings-button");
+const howToTab = document.getElementById("how-to-tab");
+const controlsTab = document.getElementById("controls-tab");
+const helpTrack = document.getElementById("help-track");
+const soundToggle = document.getElementById("sound-toggle");
+const keyboardToggle = document.getElementById("keyboard-toggle");
+const keyboardSettingItem = document.getElementById("keyboard-setting-item");
 const hintButton = document.getElementById("hint-button");
 const hintPanel = document.getElementById("hint-panel");
 const hintText = document.getElementById("hint-text");
@@ -86,8 +95,11 @@ let resizeObserver;
 let hintUsedThisRound = false;
 let hintViewedThisOpen = false;
 let soundEnabled = loadSoundPreference();
+let keyboardVisible = loadKeyboardPreference();
 let audioContext;
 let autoAdvanceTimeout;
+let backHoldTimeout;
+let backHoldTriggered = false;
 
 function loadStats() {
   const defaults = { played: 0, won: 0, streak: 0, best: 0 };
@@ -113,6 +125,19 @@ function loadSoundPreference() {
 
 function saveSoundPreference() {
   localStorage.setItem(SOUND_STORAGE_KEY, String(soundEnabled));
+}
+
+function loadKeyboardPreference() {
+  try {
+    const raw = localStorage.getItem(KEYBOARD_STORAGE_KEY);
+    return raw === null ? false : raw === "true";
+  } catch {
+    return false;
+  }
+}
+
+function saveKeyboardPreference() {
+  localStorage.setItem(KEYBOARD_STORAGE_KEY, String(keyboardVisible));
 }
 
 function updateStatsUI() {
@@ -198,10 +223,19 @@ function playChord(notes, duration, type = "sine", volume = 0.02) {
   });
 }
 
-function updateSoundButton() {
-  soundButton.textContent = soundEnabled ? "Sound On" : "Sound Off";
-  soundButton.classList.toggle("sound-on", soundEnabled);
-  soundButton.setAttribute("aria-pressed", String(soundEnabled));
+function isTouchDevice() {
+  return window.matchMedia("(pointer: coarse)").matches;
+}
+
+function applyKeyboardVisibility() {
+  const hideDesktopKeyboard = !isTouchDevice() && !keyboardVisible;
+  document.body.classList.toggle("keyboard-hidden", hideDesktopKeyboard);
+}
+
+function syncSettingsUI() {
+  soundToggle.checked = soundEnabled;
+  keyboardToggle.checked = keyboardVisible;
+  keyboardSettingItem.hidden = isTouchDevice();
 }
 
 function queueNextRound(delay = 1800) {
@@ -314,10 +348,12 @@ function syncKeyboardScale() {
   const availableWidth = keyboardPanelElement.clientWidth - horizontalPadding;
   const baseKey = 64;
   const baseHeight = 52;
-  const baseGap = 7.2;
+  const isNarrowTouch = window.matchMedia("(pointer: coarse) and (max-width: 520px)").matches;
+  const baseGap = isNarrowTouch ? 3.2 : 7.2;
+  const wideMultiplier = isNarrowTouch ? 1.18 : 1.5;
   const largestRowWidth = Math.max(
     ...keyboardLayout.map((row) => {
-      const units = row.reduce((sum, key) => sum + (key === "ENTER" || key === "BACK" ? 1.5 : 1), 0);
+      const units = row.reduce((sum, key) => sum + (key === "ENTER" || key === "BACK" ? wideMultiplier : 1), 0);
       return (units * baseKey) + ((row.length - 1) * baseGap);
     })
   );
@@ -327,18 +363,20 @@ function syncKeyboardScale() {
   }
 
   const fittedScale = Math.min(1, availableWidth / largestRowWidth);
-  const isNarrowTouch = window.matchMedia("(pointer: coarse) and (max-width: 480px)").matches;
-  const minKeyWidth = isNarrowTouch ? 26 : 30;
-  const minKeyHeight = isNarrowTouch ? 24 : 28;
+  const minKeyWidth = isNarrowTouch ? 32 : 30;
+  const minKeyHeight = isNarrowTouch ? 34 : 28;
   const keyWidth = Math.max(minKeyWidth, baseKey * fittedScale);
   const keyHeight = Math.max(minKeyHeight, baseHeight * fittedScale);
-  const keyGap = Math.max(2, baseGap * fittedScale);
-  const rowGap = Math.max(3, 8.8 * fittedScale);
+  const keyGap = Math.max(isNarrowTouch ? 1.5 : 3, baseGap * fittedScale);
+  const rowGap = Math.max(isNarrowTouch ? 2.5 : 3, 8.8 * fittedScale);
+  const keyFontSize = Math.max(isNarrowTouch ? 14 : 14, 16 * fittedScale);
 
   keyboardElement.style.setProperty("--keyboard-key", `${keyWidth}px`);
   keyboardElement.style.setProperty("--key-height", `${keyHeight}px`);
   keyboardElement.style.setProperty("--keyboard-key-gap", `${keyGap}px`);
   keyboardElement.style.setProperty("--keyboard-row-gap", `${rowGap}px`);
+  keyboardElement.style.setProperty("--key-font-size", `${keyFontSize}px`);
+  keyboardElement.style.setProperty("--key-wide-multiplier", `${wideMultiplier}`);
 }
 
 function buildBoard() {
@@ -380,6 +418,12 @@ function buildKeyboard() {
         playTone(320, 0.08, "triangle", 0.018);
         handleKeyPress(key);
       });
+      if (key === "BACK") {
+        button.addEventListener("pointerdown", startBackHold);
+        button.addEventListener("pointerup", cancelBackHold);
+        button.addEventListener("pointerleave", cancelBackHold);
+        button.addEventListener("pointercancel", cancelBackHold);
+      }
       rowElement.appendChild(button);
     });
 
@@ -389,6 +433,7 @@ function buildKeyboard() {
 
 function openHelpModal() {
   hintViewedThisOpen = false;
+  setHelpTab("how-to");
   helpModal.classList.remove("hidden");
   document.body.classList.add("modal-open");
 }
@@ -401,6 +446,28 @@ function closeHelpModal() {
   hintPanel.classList.add("hidden");
   updateHintButtonState();
   document.body.classList.remove("modal-open");
+}
+
+function openSettingsModal() {
+  syncSettingsUI();
+  settingsModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closeSettingsModal() {
+  settingsModal.classList.add("hidden");
+  if (helpModal.classList.contains("hidden")) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function setHelpTab(tab) {
+  const showControls = tab === "controls";
+  helpTrack.classList.toggle("show-controls", showControls);
+  howToTab.classList.toggle("active", !showControls);
+  controlsTab.classList.toggle("active", showControls);
+  howToTab.setAttribute("aria-selected", String(!showControls));
+  controlsTab.setAttribute("aria-selected", String(showControls));
 }
 
 function buildHint() {
@@ -456,10 +523,44 @@ function startGame() {
   buildKeyboard();
   refreshStatsUI();
   updateHintButtonState();
+  applyKeyboardVisibility();
+  syncSettingsUI();
   setMessage(`New round: ${roundConfig.length} letters, ${roundConfig.guesses} tries.`);
   setFinalGuessState(false);
   requestAnimationFrame(syncBoardScale);
   requestAnimationFrame(syncKeyboardScale);
+}
+
+function clearCurrentRow() {
+  if (gameOver || isAnimating) {
+    return;
+  }
+
+  const hasLetters = guesses[currentRow].some(Boolean);
+  if (!hasLetters) {
+    return;
+  }
+
+  for (let index = 0; index < roundConfig.length; index += 1) {
+    guesses[currentRow][index] = "";
+    writeTile(currentRow, index, "");
+  }
+  currentCol = 0;
+  setMessage("Row cleared.");
+  playTone(180, 0.12, "square", 0.012);
+}
+
+function startBackHold() {
+  cancelBackHold();
+  backHoldTriggered = false;
+  backHoldTimeout = window.setTimeout(() => {
+    clearCurrentRow();
+    backHoldTriggered = true;
+  }, 450);
+}
+
+function cancelBackHold() {
+  window.clearTimeout(backHoldTimeout);
 }
 
 function getTile(row, col) {
@@ -659,43 +760,78 @@ async function submitGuess() {
 function handlePhysicalKeyboard(event) {
   const { key } = event;
   if (key === "Enter") {
+    playTone(320, 0.08, "triangle", 0.018);
     handleKeyPress("ENTER");
     return;
   }
 
   if (key === "Backspace") {
+    if (event.repeat && !backHoldTriggered) {
+      clearCurrentRow();
+      backHoldTriggered = true;
+      return;
+    }
+    if (!event.repeat) {
+      backHoldTriggered = false;
+      playTone(320, 0.08, "triangle", 0.018);
+    }
     handleKeyPress("BACK");
     return;
   }
 
   const letter = key.toUpperCase();
   if (/^[A-Z]$/.test(letter)) {
+    playTone(320, 0.08, "triangle", 0.018);
     handleKeyPress(letter);
   }
 }
 
 document.addEventListener("keydown", handlePhysicalKeyboard);
-restartButton.addEventListener("click", startGame);
+document.addEventListener("keyup", (event) => {
+  if (event.key === "Backspace") {
+    backHoldTriggered = false;
+  }
+});
+restartButton.addEventListener("click", () => {
+  startGame();
+  playChord([330, 440, 587], 0.16, "triangle", 0.018);
+});
 helpButton.addEventListener("click", openHelpModal);
-soundButton.addEventListener("click", async () => {
-  soundEnabled = !soundEnabled;
+howToTab.addEventListener("click", () => setHelpTab("how-to"));
+controlsTab.addEventListener("click", () => setHelpTab("controls"));
+settingsButton.addEventListener("click", openSettingsModal);
+soundToggle.addEventListener("change", async () => {
+  soundEnabled = soundToggle.checked;
   saveSoundPreference();
-  updateSoundButton();
   if (soundEnabled) {
     await ensureAudioContext().resume();
     playChord([392, 494, 587], 0.16, "triangle", 0.018);
   }
+  syncSettingsUI();
 });
 closeHelpButton.addEventListener("click", closeHelpModal);
+closeSettingsButton.addEventListener("click", closeSettingsModal);
+keyboardToggle.addEventListener("change", () => {
+  keyboardVisible = keyboardToggle.checked;
+  saveKeyboardPreference();
+  applyKeyboardVisibility();
+  syncKeyboardScale();
+});
 hintButton.addEventListener("click", showHint);
 helpModal.addEventListener("click", (event) => {
   if (event.target instanceof HTMLElement && event.target.dataset.closeModal === "true") {
     closeHelpModal();
   }
 });
+settingsModal.addEventListener("click", (event) => {
+  if (event.target instanceof HTMLElement && event.target.dataset.closeSettings === "true") {
+    closeSettingsModal();
+  }
+});
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeHelpModal();
+    closeSettingsModal();
   }
 });
 
@@ -708,7 +844,10 @@ resizeObserver.observe(keyboardPanelElement);
 window.addEventListener("resize", () => {
   syncBoardScale();
   syncKeyboardScale();
+  applyKeyboardVisibility();
+  syncSettingsUI();
 });
 
 startGame();
-updateSoundButton();
+applyKeyboardVisibility();
+syncSettingsUI();
