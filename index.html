@@ -3,12 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wordle by GravityG</title>
+  <title>Wordle</title>
   <meta name="description" content="A stylish Wordle-inspired puzzle game with shifting board sizes, hints, stats, and responsive play across desktop and mobile.">
-  <meta name="keywords" content="Wordle, word game, puzzle game, browser game, GravityG, mobile word game">
+  <meta name="keywords" content="Wordle, word game, puzzle game, browser game, mobile word game">
   <meta name="author" content="GravityG">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#120a1f">
+  <meta name="application-name" content="Wordle by GravityG">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Wordle">
 
   <meta property="og:type" content="website">
   <meta property="og:title" content="Wordle by GravityG">
@@ -17,13 +21,14 @@
   <meta property="og:site_name" content="Created by GravityG">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Wordle by GravityG">
+  <meta name="twitter:title" content="Wordle">
   <meta name="twitter:description" content="A stylish Wordle-inspired puzzle game with shifting board sizes, hints, stats, and responsive play.">
   <meta name="twitter:image" content="Logo.png">
   <meta name="twitter:creator" content="GravityG">
 
   <link rel="icon" type="image/png" href="Favicon.png">
   <link rel="apple-touch-icon" href="Favicon.png">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -173,6 +178,30 @@
             <small>Show or hide the virtual keyboard on desktop.</small>
           </span>
           <input id="keyboard-toggle" class="setting-toggle" type="checkbox">
+        </label>
+
+        <label class="setting-item" for="reduced-motion-toggle">
+          <span>
+            <strong>Reduced Motion</strong>
+            <small>Soften animated effects and motion-heavy transitions.</small>
+          </span>
+          <input id="reduced-motion-toggle" class="setting-toggle" type="checkbox">
+        </label>
+
+        <label class="setting-item" for="high-contrast-toggle">
+          <span>
+            <strong>High Contrast</strong>
+            <small>Boost readability for text, chips, and tile states.</small>
+          </span>
+          <input id="high-contrast-toggle" class="setting-toggle" type="checkbox">
+        </label>
+
+        <label class="setting-item" for="large-keyboard-toggle">
+          <span>
+            <strong>Large Keyboard</strong>
+            <small>Increase the on-screen keyboard size on touch devices.</small>
+          </span>
+          <input id="large-keyboard-toggle" class="setting-toggle" type="checkbox">
         </label>
       </section>
     </section>

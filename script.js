@@ -1,6 +1,9 @@
 const STORAGE_KEY = "wordle-stats";
 const SOUND_STORAGE_KEY = "wordle-sound-enabled";
 const KEYBOARD_STORAGE_KEY = "wordle-keyboard-visible";
+const REDUCED_MOTION_STORAGE_KEY = "wordle-reduced-motion";
+const HIGH_CONTRAST_STORAGE_KEY = "wordle-high-contrast";
+const LARGE_KEYBOARD_STORAGE_KEY = "wordle-large-keyboard";
 const WORD_BANK = {
   3: [
     "ACE", "AIM", "ASH", "BOX", "DAY", "ELM", "FOX", "GEM", "ICE", "JET",
@@ -67,6 +70,9 @@ const controlsTab = document.getElementById("controls-tab");
 const helpTrack = document.getElementById("help-track");
 const soundToggle = document.getElementById("sound-toggle");
 const keyboardToggle = document.getElementById("keyboard-toggle");
+const reducedMotionToggle = document.getElementById("reduced-motion-toggle");
+const highContrastToggle = document.getElementById("high-contrast-toggle");
+const largeKeyboardToggle = document.getElementById("large-keyboard-toggle");
 const keyboardSettingItem = document.getElementById("keyboard-setting-item");
 const hintButton = document.getElementById("hint-button");
 const hintPanel = document.getElementById("hint-panel");
@@ -96,6 +102,9 @@ let hintUsedThisRound = false;
 let hintViewedThisOpen = false;
 let soundEnabled = loadSoundPreference();
 let keyboardVisible = loadKeyboardPreference();
+let reducedMotion = loadBooleanPreference(REDUCED_MOTION_STORAGE_KEY, false);
+let highContrast = loadBooleanPreference(HIGH_CONTRAST_STORAGE_KEY, false);
+let largeKeyboard = loadBooleanPreference(LARGE_KEYBOARD_STORAGE_KEY, false);
 let audioContext;
 let autoAdvanceTimeout;
 let backHoldTimeout;
@@ -113,6 +122,15 @@ function loadStats() {
 
 function saveStats() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+}
+
+function loadBooleanPreference(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === null ? fallback : raw === "true";
+  } catch {
+    return fallback;
+  }
 }
 
 function loadSoundPreference() {
@@ -138,6 +156,10 @@ function loadKeyboardPreference() {
 
 function saveKeyboardPreference() {
   localStorage.setItem(KEYBOARD_STORAGE_KEY, String(keyboardVisible));
+}
+
+function saveBooleanPreference(key, value) {
+  localStorage.setItem(key, String(value));
 }
 
 function updateStatsUI() {
@@ -235,6 +257,9 @@ function applyKeyboardVisibility() {
 function syncSettingsUI() {
   soundToggle.checked = soundEnabled;
   keyboardToggle.checked = keyboardVisible;
+  reducedMotionToggle.checked = reducedMotion;
+  highContrastToggle.checked = highContrast;
+  largeKeyboardToggle.checked = largeKeyboard;
   keyboardSettingItem.hidden = isTouchDevice();
 }
 
@@ -263,6 +288,26 @@ function spawnParticles(target, type, count = 10) {
   }
 }
 
+function spawnConfetti(target, count = 20) {
+  const rect = target.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const topY = rect.top + 20;
+  const palette = ["#7dffb8", "#ffd166", "#c98fff", "#8be9ff"];
+
+  for (let index = 0; index < count; index += 1) {
+    const particle = document.createElement("span");
+    particle.className = "particle confetti";
+    particle.style.left = `${centerX + ((Math.random() - 0.5) * rect.width)}px`;
+    particle.style.top = `${topY}px`;
+    particle.style.background = palette[index % palette.length];
+    particle.style.setProperty("--dx", `${(Math.random() - 0.5) * 180}px`);
+    particle.style.setProperty("--dy", `${70 + (Math.random() * 120)}px`);
+    particle.style.transform = `rotate(${Math.random() * 360}deg)`;
+    fxLayer.appendChild(particle);
+    window.setTimeout(() => particle.remove(), 760);
+  }
+}
+
 function createRipple(target) {
   target.classList.add("ripple-host");
   const ripple = document.createElement("span");
@@ -275,6 +320,12 @@ function refreshRoundEffects() {
   boardElement.style.animation = "none";
   void boardElement.offsetWidth;
   boardElement.style.animation = "";
+}
+
+function updateA11yModes() {
+  document.body.classList.toggle("reduced-motion", reducedMotion);
+  document.body.classList.toggle("high-contrast", highContrast);
+  document.body.classList.toggle("large-keyboard", largeKeyboard);
 }
 
 function setFinalGuessState(active) {
@@ -340,6 +391,7 @@ function updateModeChipTheme() {
   void modeChip.offsetWidth;
   modeChip.classList.add("shift");
   window.setTimeout(() => modeChip.classList.remove("shift"), 440);
+  modeChip.classList.toggle("pulsing", difficulty >= 0.62);
 }
 
 function syncBoardScale() {
@@ -378,6 +430,7 @@ function syncKeyboardScale() {
   const isNarrowTouch = window.matchMedia("(pointer: coarse) and (max-width: 520px)").matches;
   const baseGap = isNarrowTouch ? 3.2 : 7.2;
   const wideMultiplier = isNarrowTouch ? 1.18 : 1.5;
+  const keyboardBoost = largeKeyboard && isTouchDevice() ? 1.12 : 1;
   const largestRowWidth = Math.max(
     ...keyboardLayout.map((row) => {
       const units = row.reduce((sum, key) => sum + (key === "ENTER" || key === "BACK" ? wideMultiplier : 1), 0);
@@ -392,8 +445,8 @@ function syncKeyboardScale() {
   const fittedScale = Math.min(1, availableWidth / largestRowWidth);
   const minKeyWidth = isNarrowTouch ? 32 : 30;
   const minKeyHeight = isNarrowTouch ? 34 : 28;
-  const keyWidth = Math.max(minKeyWidth, baseKey * fittedScale);
-  const keyHeight = Math.max(minKeyHeight, baseHeight * fittedScale);
+  const keyWidth = Math.max(minKeyWidth, baseKey * fittedScale * keyboardBoost);
+  const keyHeight = Math.max(minKeyHeight, baseHeight * fittedScale * keyboardBoost);
   const keyGap = Math.max(isNarrowTouch ? 1.5 : 3, baseGap * fittedScale);
   const rowGap = Math.max(isNarrowTouch ? 2.5 : 3, 8.8 * fittedScale);
   const keyFontSize = Math.max(isNarrowTouch ? 14 : 14, 16 * fittedScale);
@@ -412,6 +465,9 @@ function buildBoard() {
     const rowElement = document.createElement("div");
     rowElement.className = "board-row";
     rowElement.dataset.row = row;
+    if (row === currentRow) {
+      rowElement.classList.add("current-row");
+    }
 
     for (let col = 0; col < roundConfig.length; col += 1) {
       const tile = document.createElement("div");
@@ -549,10 +605,12 @@ function startGame() {
   hintPanel.classList.add("hidden");
   updateRoundUI();
   buildBoard();
+  updateRowStateClasses();
   buildKeyboard();
   refreshStatsUI();
   updateHintButtonState();
   applyKeyboardVisibility();
+  updateA11yModes();
   syncSettingsUI();
   setMessage(`New round: ${roundConfig.length} letters, ${roundConfig.guesses} tries.`);
   setFinalGuessState(false);
@@ -577,6 +635,7 @@ function clearCurrentRow() {
   currentCol = 0;
   setMessage("Row cleared.");
   playTone(180, 0.12, "square", 0.012);
+  document.querySelector(`.board-row[data-row="${currentRow}"]`)?.classList.remove("locking");
 }
 
 function startBackHold() {
@@ -598,12 +657,17 @@ function getTile(row, col) {
 
 function writeTile(row, col, letter) {
   const tile = getTile(row, col);
+  if (!tile) {
+    return;
+  }
   tile.textContent = letter;
   tile.classList.toggle("filled", Boolean(letter));
   if (letter) {
     tile.classList.add("sparkle");
     window.setTimeout(() => tile.classList.remove("sparkle"), 520);
     spawnParticles(tile, "type", 4);
+    document.querySelector(".game")?.classList.add("input-active");
+    window.setTimeout(() => document.querySelector(".game")?.classList.remove("input-active"), 220);
   }
 }
 
@@ -644,6 +708,14 @@ function removeLetter() {
   currentCol -= 1;
   guesses[currentRow][currentCol] = "";
   writeTile(currentRow, currentCol, "");
+}
+
+function updateRowStateClasses() {
+  boardElement.querySelectorAll(".board-row").forEach((rowElement) => {
+    const rowNumber = Number(rowElement.dataset.row);
+    rowElement.classList.toggle("current-row", rowNumber === currentRow && !gameOver);
+    rowElement.classList.toggle("settled", rowNumber < currentRow);
+  });
 }
 
 function scoreGuess(guess) {
@@ -698,6 +770,13 @@ function animateRowResult(row, guess, result) {
         tile.classList.remove("flip");
         tile.classList.add(state);
         updateKeyState(guess[index], state);
+        if (state === "correct") {
+          playTone(620 + (index * 45), 0.12, "triangle", 0.012);
+        } else if (state === "present") {
+          playTone(430 + (index * 25), 0.11, "sine", 0.01);
+        } else {
+          playTone(220 + (index * 12), 0.08, "square", 0.008);
+        }
         resolve();
       }, 300);
     }, index * 180);
@@ -731,6 +810,10 @@ async function submitGuess() {
 
   const guess = guesses[currentRow].join("");
   const result = scoreGuess(guess);
+  const rowElement = boardElement.children[currentRow];
+  rowElement?.classList.add("locking");
+  playTone(260, 0.12, "square", 0.016);
+  window.setTimeout(() => rowElement?.classList.remove("locking"), 220);
   isAnimating = true;
   await animateRowResult(currentRow, guess, result);
   isAnimating = false;
@@ -753,6 +836,11 @@ async function submitGuess() {
     celebrateRow(currentRow);
     boardElement.children[currentRow]?.classList.add("perfect");
     playChord([523, 659, 784, 1046], 0.22, "triangle", 0.02);
+    result.forEach((state, index) => {
+      if (state === "correct") {
+        playTone(600 + (index * 70), 0.13, "triangle", 0.012);
+      }
+    });
     setMessage(`Solved ${roundConfig.length}x${roundConfig.guesses}: ${secretWord}`, "success");
     document.querySelectorAll(".background-orb").forEach((orb) => {
       orb.animate(
@@ -764,12 +852,17 @@ async function submitGuess() {
         { duration: 1200, easing: "ease-out" }
       );
     });
+    const difficultyScore = roundConfig.length + (8 - roundConfig.guesses);
+    if (difficultyScore >= 10) {
+      spawnConfetti(boardElement, 26);
+    }
     queueNextRound(2200);
     return;
   }
 
   currentRow += 1;
   currentCol = 0;
+  updateRowStateClasses();
 
   if (currentRow === roundConfig.guesses) {
     gameOver = true;
@@ -842,6 +935,25 @@ soundToggle?.addEventListener("change", async () => {
   }
   syncSettingsUI();
 });
+reducedMotionToggle?.addEventListener("change", () => {
+  reducedMotion = reducedMotionToggle.checked;
+  saveBooleanPreference(REDUCED_MOTION_STORAGE_KEY, reducedMotion);
+  updateA11yModes();
+  syncSettingsUI();
+});
+highContrastToggle?.addEventListener("change", () => {
+  highContrast = highContrastToggle.checked;
+  saveBooleanPreference(HIGH_CONTRAST_STORAGE_KEY, highContrast);
+  updateA11yModes();
+  syncSettingsUI();
+});
+largeKeyboardToggle?.addEventListener("change", () => {
+  largeKeyboard = largeKeyboardToggle.checked;
+  saveBooleanPreference(LARGE_KEYBOARD_STORAGE_KEY, largeKeyboard);
+  updateA11yModes();
+  syncKeyboardScale();
+  syncSettingsUI();
+});
 closeHelpButton?.addEventListener("click", closeHelpModal);
 closeSettingsButton?.addEventListener("click", closeSettingsModal);
 keyboardToggle?.addEventListener("change", () => {
@@ -888,4 +1000,11 @@ window.addEventListener("resize", () => {
 
 startGame();
 applyKeyboardVisibility();
+updateA11yModes();
 syncSettingsUI();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}

@@ -1,0 +1,25 @@
+{
+  "name": "Wordle by GravityG",
+  "short_name": "Wordle",
+  "description": "A stylish Wordle-inspired puzzle game with shifting board sizes, hints, stats, and responsive play.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090511",
+  "theme_color": "#120a1f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "Favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "Favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
