@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wordle</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
+  <div class="app-shell">
+    <div class="background-glow background-glow-left"></div>
+    <div class="background-glow background-glow-right"></div>
+    <div class="background-orb orb-one"></div>
+    <div class="background-orb orb-two"></div>
+    <div class="background-orb orb-three"></div>
+
+    <main class="game">
+      <header class="topbar">
+        <div class="brand-block">
+          <h1>Wordle</h1>
+          <p class="subtitle">Crack the five-letter code in six glowing guesses.</p>
+          <p class="eyebrow">by GravityG</p>
+        </div>
+
+        <section class="stats" aria-label="Game statistics">
+          <article class="chip">
+            <span class="chip-label">Played</span>
+            <strong id="games-played">0</strong>
+          </article>
+          <article class="chip">
+            <span class="chip-label">Wins</span>
+            <strong id="games-won">0</strong>
+          </article>
+          <article class="chip">
+            <span class="chip-label">Streak</span>
+            <strong id="current-streak">0</strong>
+          </article>
+          <article class="chip">
+            <span class="chip-label">Best</span>
+            <strong id="best-streak">0</strong>
+          </article>
+        </section>
+      </header>
+
+      <section class="control-panel" aria-label="Round controls">
+        <div class="control-actions">
+          <button id="restart-button" class="ghost-button" type="button">New Word</button>
+          <button id="help-button" class="ghost-button" type="button" aria-haspopup="dialog" aria-controls="help-modal">Help</button>
+          <button id="sound-button" class="ghost-button sound-button" type="button" aria-pressed="false">Sound Off</button>
+        </div>
+        <article class="chip mode-chip">
+          <span class="chip-label">Mode</span>
+          <strong id="round-format">5x6</strong>
+        </article>
+      </section>
+
+      <section class="board-panel">
+        <div class="status-row">
+          <div id="message" class="message" aria-live="polite">Start typing to begin.</div>
+        </div>
+
+        <section id="board" class="board" aria-label="Wordle board"></section>
+      </section>
+
+      <section class="keyboard-panel">
+        <div id="keyboard" class="keyboard" aria-label="On-screen keyboard"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="help-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <section class="modal-card">
+      <button id="close-help-button" class="modal-close" type="button" aria-label="Close help">Close</button>
+      <p class="modal-eyebrow">Player Guide</p>
+      <h2 id="help-title">Player Help</h2>
+
+      <section class="modal-legend" aria-label="Tile hints">
+        <span><i class="legend-dot correct"></i> Correct letter, correct spot</span>
+        <span><i class="legend-dot present"></i> Correct letter, wrong spot</span>
+        <span><i class="legend-dot absent"></i> Letter not in the word</span>
+      </section>
+
+      <button id="hint-button" class="ghost-button hint-button" type="button">Hint</button>
+
+      <section id="hint-panel" class="hint-panel hidden" aria-live="polite">
+        <div class="hint-panel-header">
+          <strong>Live Hint</strong>
+          <span id="hint-timer">7s</span>
+        </div>
+        <div class="hint-scroll">
+          <p id="hint-text">Tap hint to reveal a short clue for this round.</p>
+        </div>
+      </section>
+
+      <section class="how-to-play">
+        <h3>How to play</h3>
+        <div class="hint-scroll">
+          <p>Guess the hidden word before you run out of tries.</p>
+          <p>Each row is one guess. The mode chip shows the current layout, like <strong>7x5</strong> for seven letters and five tries.</p>
+          <p>Use the on-screen keyboard or your physical keyboard. Press <strong>Enter</strong> to submit and <strong>Back</strong> to erase.</p>
+          <p>Watch the tile colors after each guess, then narrow down the next attempt.</p>
+          <p>The hint button can be used once per round and locks after you close the help window.</p>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

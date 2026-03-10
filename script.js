@@ -1,0 +1,709 @@
+const STORAGE_KEY = "wordle-stats";
+const SOUND_STORAGE_KEY = "wordle-sound-enabled";
+const WORD_BANK = {
+  3: [
+    "ACE", "AIM", "ASH", "BOX", "DAY", "ELM", "FOX", "GEM", "ICE", "JET",
+    "KEY", "LUX", "MAP", "ORB", "OWL", "RAY", "SKY", "SUN", "VOW", "ZAP"
+  ],
+  4: [
+    "AURA", "BEAM", "BOLT", "CALM", "DUSK", "ECHO", "FERN", "GLOW", "HAZE", "IRIS",
+    "JOLT", "LENS", "LUNA", "MINT", "NOVA", "ONYX", "PEAK", "QUIZ", "RIFT", "WAVE"
+  ],
+  5: [
+    "ALLOY", "BLOOM", "BRISK", "CHIME", "DREAM", "EMBER", "FLARE", "GLINT", "GROVE", "IVORY",
+    "JAZZY", "LASER", "MAPLE", "NEXUS", "OPERA", "PIXEL", "QUEST", "RHYME", "SOLAR", "TIGER"
+  ],
+  6: [
+    "AURORA", "BREEZE", "COSMIC", "CINDER", "DRIFTS", "FUSION", "GALAXY", "HARBOR", "JUNGLE", "LILACS",
+    "MAGNET", "NEBULA", "ORANGE", "PHOTON", "RIPPLE", "SILVER", "THRIVE", "VORTEX", "WONDER", "ZEPHYR"
+  ],
+  7: [
+    "BALANCE", "CAPTURE", "CRIMSON", "DYNAMIC", "FANTASY", "FLICKER", "GLACIER", "HARMONY", "JOURNEY", "KINGDOM",
+    "LANTERN", "MYSTERY", "ORCHARD", "PHANTOM", "RADIANT", "SEASIDE", "TRIUMPH", "UNFOLDS", "VICTORY", "WHISPER"
+  ]
+};
+
+const ROUND_FORMATS = [
+  { length: 3, guesses: 5 },
+  { length: 3, guesses: 6 },
+  { length: 3, guesses: 7 },
+  { length: 4, guesses: 4 },
+  { length: 4, guesses: 5 },
+  { length: 4, guesses: 6 },
+  { length: 4, guesses: 7 },
+  { length: 5, guesses: 5 },
+  { length: 5, guesses: 6 },
+  { length: 5, guesses: 7 },
+  { length: 6, guesses: 4 },
+  { length: 6, guesses: 5 },
+  { length: 6, guesses: 6 },
+  { length: 6, guesses: 7 },
+  { length: 7, guesses: 5 },
+  { length: 7, guesses: 6 },
+  { length: 7, guesses: 7 }
+];
+
+const keyboardLayout = [
+  ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+  ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+  ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "BACK"]
+];
+
+const boardElement = document.getElementById("board");
+const keyboardPanelElement = document.querySelector(".keyboard-panel");
+const keyboardElement = document.getElementById("keyboard");
+const fxLayer = document.getElementById("fx-layer");
+const messageElement = document.getElementById("message");
+const restartButton = document.getElementById("restart-button");
+const helpButton = document.getElementById("help-button");
+const soundButton = document.getElementById("sound-button");
+const helpModal = document.getElementById("help-modal");
+const closeHelpButton = document.getElementById("close-help-button");
+const hintButton = document.getElementById("hint-button");
+const hintPanel = document.getElementById("hint-panel");
+const hintText = document.getElementById("hint-text");
+const hintTimer = document.getElementById("hint-timer");
+const roundFormatElement = document.getElementById("round-format");
+
+const statsElements = {
+  played: document.getElementById("games-played"),
+  won: document.getElementById("games-won"),
+  streak: document.getElementById("current-streak"),
+  best: document.getElementById("best-streak")
+};
+
+let stats = loadStats();
+let secretWord = "";
+let currentRow = 0;
+let currentCol = 0;
+let guesses = [];
+let gameOver = false;
+let isAnimating = false;
+let roundConfig = ROUND_FORMATS[2];
+let previousRoundKey = "";
+let previousWord = "";
+let resizeObserver;
+let hintUsedThisRound = false;
+let hintViewedThisOpen = false;
+let soundEnabled = loadSoundPreference();
+let audioContext;
+let autoAdvanceTimeout;
+
+function loadStats() {
+  const defaults = { played: 0, won: 0, streak: 0, best: 0 };
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
+  } catch {
+    return defaults;
+  }
+}
+
+function saveStats() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+}
+
+function loadSoundPreference() {
+  try {
+    return localStorage.getItem(SOUND_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function saveSoundPreference() {
+  localStorage.setItem(SOUND_STORAGE_KEY, String(soundEnabled));
+}
+
+function updateStatsUI() {
+  statsElements.played.textContent = stats.played;
+  statsElements.won.textContent = stats.won;
+  statsElements.streak.textContent = stats.streak;
+  statsElements.best.textContent = stats.best;
+}
+
+function animateNumber(element, nextValue) {
+  const currentValue = Number(element.textContent) || 0;
+  if (currentValue === nextValue) {
+    return;
+  }
+
+  const start = performance.now();
+  const duration = 420;
+  const step = (timestamp) => {
+    const progress = Math.min(1, (timestamp - start) / duration);
+    element.textContent = Math.round(currentValue + ((nextValue - currentValue) * progress));
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    }
+  };
+
+  element.parentElement?.classList.add("bump");
+  window.setTimeout(() => element.parentElement?.classList.remove("bump"), 420);
+  requestAnimationFrame(step);
+}
+
+function refreshStatsUI(animated = false) {
+  const pairs = [
+    [statsElements.played, stats.played],
+    [statsElements.won, stats.won],
+    [statsElements.streak, stats.streak],
+    [statsElements.best, stats.best]
+  ];
+
+  pairs.forEach(([element, value]) => {
+    if (animated) {
+      animateNumber(element, value);
+    } else {
+      element.textContent = value;
+    }
+  });
+}
+
+function setMessage(text, type = "") {
+  messageElement.textContent = text;
+  messageElement.className = `message ${type}`.trim();
+}
+
+function ensureAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioContext;
+}
+
+function playTone(frequency, duration, type = "sine", volume = 0.03) {
+  if (!soundEnabled) {
+    return;
+  }
+
+  const context = ensureAudioContext();
+  const oscillator = context.createOscillator();
+  const gainNode = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.value = frequency;
+  gainNode.gain.value = volume;
+  oscillator.connect(gainNode);
+  gainNode.connect(context.destination);
+  const now = context.currentTime;
+  gainNode.gain.setValueAtTime(volume, now);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  oscillator.start(now);
+  oscillator.stop(now + duration);
+}
+
+function playChord(notes, duration, type = "sine", volume = 0.02) {
+  notes.forEach((note, index) => {
+    window.setTimeout(() => playTone(note, duration, type, volume), index * 70);
+  });
+}
+
+function updateSoundButton() {
+  soundButton.textContent = soundEnabled ? "Sound On" : "Sound Off";
+  soundButton.classList.toggle("sound-on", soundEnabled);
+  soundButton.setAttribute("aria-pressed", String(soundEnabled));
+}
+
+function queueNextRound(delay = 1800) {
+  window.clearTimeout(autoAdvanceTimeout);
+  autoAdvanceTimeout = window.setTimeout(() => {
+    startGame();
+    playChord([330, 440, 587], 0.16, "triangle", 0.018);
+  }, delay);
+}
+
+function spawnParticles(target, type, count = 10) {
+  const rect = target.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+
+  for (let index = 0; index < count; index += 1) {
+    const particle = document.createElement("span");
+    particle.className = `particle ${type}`;
+    particle.style.left = `${centerX}px`;
+    particle.style.top = `${centerY}px`;
+    particle.style.setProperty("--dx", `${(Math.random() - 0.5) * 60}px`);
+    particle.style.setProperty("--dy", `${(Math.random() - 0.5) * 60}px`);
+    fxLayer.appendChild(particle);
+    window.setTimeout(() => particle.remove(), 700);
+  }
+}
+
+function createRipple(target) {
+  target.classList.add("ripple-host");
+  const ripple = document.createElement("span");
+  ripple.className = "key-ripple";
+  target.appendChild(ripple);
+  window.setTimeout(() => ripple.remove(), 540);
+}
+
+function refreshRoundEffects() {
+  boardElement.style.animation = "none";
+  void boardElement.offsetWidth;
+  boardElement.style.animation = "";
+}
+
+function setFinalGuessState(active) {
+  document.querySelector(".game")?.classList.toggle("final-guess", active);
+}
+
+function randomFrom(list, exclude = "") {
+  if (list.length === 1) {
+    return list[0];
+  }
+
+  let choice = list[Math.floor(Math.random() * list.length)];
+  while (choice === exclude) {
+    choice = list[Math.floor(Math.random() * list.length)];
+  }
+  return choice;
+}
+
+function pickRoundConfig() {
+  const options = ROUND_FORMATS.filter((config) => `${config.length}x${config.guesses}` !== previousRoundKey);
+  const round = options[Math.floor(Math.random() * options.length)];
+  previousRoundKey = `${round.length}x${round.guesses}`;
+  return { length: round.length, guesses: round.guesses };
+}
+
+function pickSecretWord(length) {
+  const words = WORD_BANK[length];
+  const word = randomFrom(words, previousWord);
+  previousWord = word;
+  return word;
+}
+
+function updateRoundUI() {
+  boardElement.style.setProperty("--board-cols", roundConfig.length);
+  boardElement.style.setProperty("--board-rows", roundConfig.guesses);
+  roundFormatElement.textContent = `${roundConfig.length}x${roundConfig.guesses}`;
+  syncBoardScale();
+  refreshRoundEffects();
+}
+
+function syncBoardScale() {
+  const styles = window.getComputedStyle(boardElement);
+  const baseTile = parseFloat(styles.getPropertyValue("--tile-size"));
+  const baseGap = parseFloat(styles.getPropertyValue("--tile-gap"));
+  if (!baseTile || !baseGap) {
+    return;
+  }
+
+  const availableWidth = boardElement.clientWidth;
+  const availableHeight = boardElement.clientHeight;
+  if (!availableWidth || !availableHeight) {
+    return;
+  }
+
+  const widthScale = (availableWidth + baseGap) / ((roundConfig.length * baseTile) + ((roundConfig.length - 1) * baseGap));
+  const heightScale = (availableHeight + baseGap) / ((roundConfig.guesses * baseTile) + ((roundConfig.guesses - 1) * baseGap));
+  const tileScale = Math.max(0.72, Math.min(widthScale, heightScale));
+  const gapScale = Math.max(0.72, Math.min(1.08, tileScale * 0.94));
+
+  boardElement.style.setProperty("--round-tile-scale", `${tileScale}`);
+  boardElement.style.setProperty("--round-gap-scale", `${gapScale}`);
+}
+
+function syncKeyboardScale() {
+  if (!keyboardPanelElement) {
+    return;
+  }
+
+  const panelStyles = window.getComputedStyle(keyboardPanelElement);
+  const horizontalPadding = parseFloat(panelStyles.paddingLeft) + parseFloat(panelStyles.paddingRight);
+  const availableWidth = keyboardPanelElement.clientWidth - horizontalPadding;
+  const baseKey = 64;
+  const baseHeight = 52;
+  const baseGap = 7.2;
+  const largestRowUnits = Math.max(
+    ...keyboardLayout.map((row) => row.reduce((units, key) => units + (key === "ENTER" || key === "BACK" ? 1.5 : 1), 0))
+  );
+  const largestRowWidth = (largestRowUnits * baseKey) + ((keyboardLayout[0].length - 1) * baseGap);
+
+  if (!availableWidth || !largestRowWidth) {
+    return;
+  }
+
+  const fittedScale = Math.min(1, availableWidth / largestRowWidth);
+  const keyWidth = Math.max(34, baseKey * fittedScale);
+  const keyHeight = Math.max(30, baseHeight * fittedScale);
+  const keyGap = Math.max(3, baseGap * fittedScale);
+  const rowGap = Math.max(4, 8.8 * fittedScale);
+
+  keyboardElement.style.setProperty("--keyboard-key", `${keyWidth}px`);
+  keyboardElement.style.setProperty("--key-height", `${keyHeight}px`);
+  keyboardElement.style.setProperty("--keyboard-key-gap", `${keyGap}px`);
+  keyboardElement.style.setProperty("--keyboard-row-gap", `${rowGap}px`);
+}
+
+function buildBoard() {
+  boardElement.innerHTML = "";
+  for (let row = 0; row < roundConfig.guesses; row += 1) {
+    const rowElement = document.createElement("div");
+    rowElement.className = "board-row";
+    rowElement.dataset.row = row;
+
+    for (let col = 0; col < roundConfig.length; col += 1) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.dataset.row = row;
+      tile.dataset.col = col;
+      rowElement.appendChild(tile);
+    }
+
+    boardElement.appendChild(rowElement);
+  }
+}
+
+function buildKeyboard() {
+  keyboardElement.innerHTML = "";
+  keyboardLayout.forEach((row) => {
+    const rowElement = document.createElement("div");
+    rowElement.className = "keyboard-row";
+
+    row.forEach((key) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "key";
+      button.dataset.key = key;
+      button.textContent = key === "BACK" ? "Back" : key;
+      if (key === "ENTER" || key === "BACK") {
+        button.classList.add("large");
+      }
+      button.addEventListener("click", () => {
+        createRipple(button);
+        playTone(320, 0.08, "triangle", 0.018);
+        handleKeyPress(key);
+      });
+      rowElement.appendChild(button);
+    });
+
+    keyboardElement.appendChild(rowElement);
+  });
+}
+
+function openHelpModal() {
+  hintViewedThisOpen = false;
+  helpModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closeHelpModal() {
+  if (hintViewedThisOpen) {
+    hintUsedThisRound = true;
+  }
+  helpModal.classList.add("hidden");
+  hintPanel.classList.add("hidden");
+  updateHintButtonState();
+  document.body.classList.remove("modal-open");
+}
+
+function buildHint() {
+  const firstLetter = secretWord[0];
+  const uniqueLetters = new Set(secretWord.split(""));
+  const vowels = secretWord.split("").filter((letter) => "AEIOU".includes(letter)).length;
+  const clueRow = guesses.find((row) => row.some(Boolean));
+  const progress = clueRow ? `You have already tried ${clueRow.filter(Boolean).length} letters in your current row.` : "You have not committed a guess yet.";
+  return [
+    `This word is <span class="hint-accent">${roundConfig.length} letters</span> long and starts with <span class="hint-accent">${firstLetter}</span>.`,
+    `It contains <span class="hint-accent">${uniqueLetters.size} unique</span> letters and <span class="hint-accent">${vowels} vowel${vowels === 1 ? "" : "s"}</span>.`,
+    progress
+  ].join(" ");
+}
+
+function updateHintButtonState() {
+  hintButton.classList.remove("available", "used");
+  if (hintUsedThisRound) {
+    hintButton.textContent = "Hint Used";
+    hintButton.classList.add("used");
+  } else {
+    hintButton.textContent = "Hint";
+    hintButton.classList.add("available");
+  }
+}
+
+function showHint() {
+  if (hintUsedThisRound) {
+    return;
+  }
+
+  hintText.innerHTML = buildHint();
+  hintPanel.classList.remove("hidden");
+  hintTimer.textContent = "Ready";
+  hintViewedThisOpen = true;
+  playChord([440, 554, 659], 0.18, "triangle", 0.015);
+}
+
+function startGame() {
+  window.clearTimeout(autoAdvanceTimeout);
+  roundConfig = pickRoundConfig();
+  secretWord = pickSecretWord(roundConfig.length);
+  currentRow = 0;
+  currentCol = 0;
+  guesses = Array.from({ length: roundConfig.guesses }, () => Array(roundConfig.length).fill(""));
+  gameOver = false;
+  isAnimating = false;
+  hintUsedThisRound = false;
+  hintViewedThisOpen = false;
+  hintPanel.classList.add("hidden");
+  updateRoundUI();
+  buildBoard();
+  buildKeyboard();
+  refreshStatsUI();
+  updateHintButtonState();
+  setMessage(`New round: ${roundConfig.length} letters, ${roundConfig.guesses} tries.`);
+  setFinalGuessState(false);
+  requestAnimationFrame(syncBoardScale);
+  requestAnimationFrame(syncKeyboardScale);
+}
+
+function getTile(row, col) {
+  return boardElement.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+}
+
+function writeTile(row, col, letter) {
+  const tile = getTile(row, col);
+  tile.textContent = letter;
+  tile.classList.toggle("filled", Boolean(letter));
+  if (letter) {
+    tile.classList.add("sparkle");
+    window.setTimeout(() => tile.classList.remove("sparkle"), 520);
+    spawnParticles(tile, "type", 4);
+  }
+}
+
+function handleKeyPress(key) {
+  if (gameOver || isAnimating) {
+    return;
+  }
+
+  if (key === "ENTER") {
+    submitGuess();
+    return;
+  }
+
+  if (key === "BACK") {
+    removeLetter();
+    return;
+  }
+
+  if (!/^[A-Z]$/.test(key) || currentCol >= roundConfig.length) {
+    return;
+  }
+
+  guesses[currentRow][currentCol] = key;
+  writeTile(currentRow, currentCol, key);
+  currentCol += 1;
+  setMessage(`Guess ${currentRow + 1} of ${roundConfig.guesses}.`);
+}
+
+function removeLetter() {
+  if (currentCol === 0) {
+    return;
+  }
+
+  currentCol -= 1;
+  guesses[currentRow][currentCol] = "";
+  writeTile(currentRow, currentCol, "");
+}
+
+function scoreGuess(guess) {
+  const result = Array(roundConfig.length).fill("absent");
+  const secretLetters = secretWord.split("");
+  const used = Array(roundConfig.length).fill(false);
+
+  for (let index = 0; index < roundConfig.length; index += 1) {
+    if (guess[index] === secretLetters[index]) {
+      result[index] = "correct";
+      used[index] = true;
+    }
+  }
+
+  for (let index = 0; index < roundConfig.length; index += 1) {
+    if (result[index] === "correct") {
+      continue;
+    }
+
+    const matchIndex = secretLetters.findIndex((letter, innerIndex) => letter === guess[index] && !used[innerIndex]);
+    if (matchIndex !== -1) {
+      result[index] = "present";
+      used[matchIndex] = true;
+    }
+  }
+
+  return result;
+}
+
+function updateKeyState(letter, state) {
+  const key = keyboardElement.querySelector(`[data-key="${letter}"]`);
+  if (!key) {
+    return;
+  }
+
+  const precedence = { correct: 3, present: 2, absent: 1 };
+  const currentState = ["correct", "present", "absent"].find((name) => key.classList.contains(name));
+  if (currentState && precedence[currentState] > precedence[state]) {
+    return;
+  }
+
+  key.classList.remove("correct", "present", "absent");
+  key.classList.add(state);
+}
+
+function animateRowResult(row, guess, result) {
+  return Promise.all(result.map((state, index) => new Promise((resolve) => {
+    const tile = getTile(row, index);
+    setTimeout(() => {
+      tile.classList.add("flip");
+      window.setTimeout(() => {
+        tile.classList.remove("flip");
+        tile.classList.add(state);
+        updateKeyState(guess[index], state);
+        resolve();
+      }, 300);
+    }, index * 180);
+  })));
+}
+
+function celebrateRow(row) {
+  for (let index = 0; index < roundConfig.length; index += 1) {
+    const tile = getTile(row, index);
+    setTimeout(() => {
+      tile.classList.add("pop");
+      window.setTimeout(() => tile.classList.remove("pop"), 400);
+    }, index * 90);
+  }
+}
+
+function shakeCurrentRow() {
+  for (let index = 0; index < roundConfig.length; index += 1) {
+    const tile = getTile(currentRow, index);
+    tile.classList.add("shake");
+    window.setTimeout(() => tile.classList.remove("shake"), 360);
+  }
+}
+
+async function submitGuess() {
+  if (currentCol < roundConfig.length) {
+    shakeCurrentRow();
+    setMessage(`Guess must be ${roundConfig.length} letters.`, "error");
+    return;
+  }
+
+  const guess = guesses[currentRow].join("");
+  const result = scoreGuess(guess);
+  isAnimating = true;
+  await animateRowResult(currentRow, guess, result);
+  isAnimating = false;
+
+  result.forEach((state, index) => {
+    const tile = getTile(currentRow, index);
+    if (state === "correct" || state === "present") {
+      spawnParticles(tile, state, state === "correct" ? 10 : 7);
+    }
+  });
+
+  if (guess === secretWord) {
+    gameOver = true;
+    stats.played += 1;
+    stats.won += 1;
+    stats.streak += 1;
+    stats.best = Math.max(stats.best, stats.streak);
+    saveStats();
+    refreshStatsUI(true);
+    celebrateRow(currentRow);
+    boardElement.children[currentRow]?.classList.add("perfect");
+    playChord([523, 659, 784, 1046], 0.22, "triangle", 0.02);
+    setMessage(`Solved ${roundConfig.length}x${roundConfig.guesses}: ${secretWord}`, "success");
+    document.querySelectorAll(".background-orb").forEach((orb) => {
+      orb.animate(
+        [
+          { opacity: 0.22, transform: "scale(1)" },
+          { opacity: 0.48, transform: "scale(1.18)" },
+          { opacity: 0.22, transform: "scale(1)" }
+        ],
+        { duration: 1200, easing: "ease-out" }
+      );
+    });
+    queueNextRound(2200);
+    return;
+  }
+
+  currentRow += 1;
+  currentCol = 0;
+
+  if (currentRow === roundConfig.guesses) {
+    gameOver = true;
+    stats.played += 1;
+    stats.streak = 0;
+    saveStats();
+    refreshStatsUI(true);
+    playChord([220, 185, 146], 0.26, "sawtooth", 0.018);
+    setMessage(`Out of turns. Word was ${secretWord}.`, "error");
+    queueNextRound(2400);
+    return;
+  }
+
+  setFinalGuessState(currentRow === roundConfig.guesses - 1);
+  if (currentRow === roundConfig.guesses - 1) {
+    playTone(180, 0.18, "square", 0.015);
+  }
+  setMessage(`${roundConfig.guesses - currentRow} guesses left.`);
+}
+
+function handlePhysicalKeyboard(event) {
+  const { key } = event;
+  if (key === "Enter") {
+    handleKeyPress("ENTER");
+    return;
+  }
+
+  if (key === "Backspace") {
+    handleKeyPress("BACK");
+    return;
+  }
+
+  const letter = key.toUpperCase();
+  if (/^[A-Z]$/.test(letter)) {
+    handleKeyPress(letter);
+  }
+}
+
+document.addEventListener("keydown", handlePhysicalKeyboard);
+restartButton.addEventListener("click", startGame);
+helpButton.addEventListener("click", openHelpModal);
+soundButton.addEventListener("click", async () => {
+  soundEnabled = !soundEnabled;
+  saveSoundPreference();
+  updateSoundButton();
+  if (soundEnabled) {
+    await ensureAudioContext().resume();
+    playChord([392, 494, 587], 0.16, "triangle", 0.018);
+  }
+});
+closeHelpButton.addEventListener("click", closeHelpModal);
+hintButton.addEventListener("click", showHint);
+helpModal.addEventListener("click", (event) => {
+  if (event.target instanceof HTMLElement && event.target.dataset.closeModal === "true") {
+    closeHelpModal();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeHelpModal();
+  }
+});
+
+resizeObserver = new ResizeObserver(() => {
+  syncBoardScale();
+  syncKeyboardScale();
+});
+resizeObserver.observe(boardElement);
+resizeObserver.observe(keyboardPanelElement);
+window.addEventListener("resize", () => {
+  syncBoardScale();
+  syncKeyboardScale();
+});
+
+startGame();
+updateSoundButton();
