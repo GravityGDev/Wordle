@@ -4,7 +4,7 @@ const KEYBOARD_STORAGE_KEY = "wordle-keyboard-visible";
 const WORD_BANK = {
   3: [
     "ACE", "AIM", "ASH", "BOX", "DAY", "ELM", "FOX", "GEM", "ICE", "JET",
-    "KEY", "LUX", "MAP", "ORB", "OWL", "RAY", "SKY", "SUN", "VOW", "ZAP"
+    "KEY", "LUX", "MAP", "ORB", "OWL", "RAY", "SKY", "SUN", "VOW", "CAT", "ZAP"
   ],
   4: [
     "AURA", "BEAM", "BOLT", "CALM", "DUSK", "ECHO", "FERN", "GLOW", "HAZE", "IRIS",
@@ -311,8 +311,35 @@ function updateRoundUI() {
   boardElement.style.setProperty("--board-cols", roundConfig.length);
   boardElement.style.setProperty("--board-rows", roundConfig.guesses);
   roundFormatElement.textContent = `${roundConfig.length}x${roundConfig.guesses}`;
+  updateModeChipTheme();
   syncBoardScale();
   refreshRoundEffects();
+}
+
+function updateModeChipTheme() {
+  const modeChip = roundFormatElement.closest(".mode-chip");
+  if (!modeChip) {
+    return;
+  }
+
+  const maxLength = 7;
+  const minGuesses = 4;
+  const maxGuesses = 7;
+  const lengthWeight = (roundConfig.length - 3) / (maxLength - 3);
+  const guessWeight = (maxGuesses - roundConfig.guesses) / (maxGuesses - minGuesses);
+  const difficulty = Math.min(1, Math.max(0, (lengthWeight * 0.62) + (guessWeight * 0.38)));
+
+  const easy = { r: 110, g: 234, b: 190 };
+  const hard = { r: 198, g: 120, b: 255 };
+  const r = Math.round(easy.r + ((hard.r - easy.r) * difficulty));
+  const g = Math.round(easy.g + ((hard.g - easy.g) * difficulty));
+  const b = Math.round(easy.b + ((hard.b - easy.b) * difficulty));
+
+  modeChip.style.setProperty("--mode-color", `rgba(${r}, ${g}, ${b}, 0.92)`);
+  modeChip.classList.remove("shift");
+  void modeChip.offsetWidth;
+  modeChip.classList.add("shift");
+  window.setTimeout(() => modeChip.classList.remove("shift"), 440);
 }
 
 function syncBoardScale() {
@@ -445,7 +472,9 @@ function closeHelpModal() {
   helpModal.classList.add("hidden");
   hintPanel.classList.add("hidden");
   updateHintButtonState();
-  document.body.classList.remove("modal-open");
+  if (settingsModal.classList.contains("hidden")) {
+    document.body.classList.remove("modal-open");
+  }
 }
 
 function openSettingsModal() {
@@ -474,13 +503,13 @@ function buildHint() {
   const firstLetter = secretWord[0];
   const uniqueLetters = new Set(secretWord.split(""));
   const vowels = secretWord.split("").filter((letter) => "AEIOU".includes(letter)).length;
-  const clueRow = guesses.find((row) => row.some(Boolean));
-  const progress = clueRow ? `You have already tried ${clueRow.filter(Boolean).length} letters in your current row.` : "You have not committed a guess yet.";
-  return [
-    `This word is <span class="hint-accent">${roundConfig.length} letters</span> long and starts with <span class="hint-accent">${firstLetter}</span>.`,
-    `It contains <span class="hint-accent">${uniqueLetters.size} unique</span> letters and <span class="hint-accent">${vowels} vowel${vowels === 1 ? "" : "s"}</span>.`,
-    progress
-  ].join(" ");
+  return `
+    <div class="hint-list">
+      <div class="hint-line">Starts with <span class="hint-accent">${firstLetter}</span></div>
+      <div class="hint-line">Contains <span class="hint-accent">${uniqueLetters.size} unique</span></div>
+      <div class="hint-line"><span class="hint-accent">${vowels} vowel${vowels === 1 ? "" : "s"}</span></div>
+    </div>
+  `;
 }
 
 function updateHintButtonState() {

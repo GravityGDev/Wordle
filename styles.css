@@ -217,6 +217,12 @@ button {
   gap: 1rem;
 }
 
+.brand-block {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
 .control-panel {
   padding: 0.9rem 1rem;
   display: flex;
@@ -244,6 +250,13 @@ button {
   margin: 0;
   font-size: clamp(2rem, 5vw, 3.4rem);
   line-height: 0.95;
+}
+
+.brand-logo {
+  display: block;
+  width: min(100%, 16rem);
+  height: auto;
+  margin: 0 auto;
 }
 
 .subtitle {
@@ -335,6 +348,28 @@ button {
   min-width: 7rem;
   width: auto;
   justify-self: end;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--mode-color, rgba(159, 92, 255, 0.18)) 26%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.04));
+  border-color: color-mix(in srgb, var(--mode-color, rgba(159, 92, 255, 0.32)) 55%, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 0 24px color-mix(in srgb, var(--mode-color, rgba(159, 92, 255, 0.28)) 35%, transparent);
+  transition: background 260ms ease, border-color 260ms ease, box-shadow 260ms ease, transform 260ms ease;
+}
+
+.mode-chip .chip-label,
+.mode-chip strong {
+  transition: color 260ms ease;
+}
+
+.mode-chip .chip-label {
+  color: color-mix(in srgb, var(--mode-color, #c98fff) 58%, #f7eeff);
+}
+
+.mode-chip strong {
+  color: color-mix(in srgb, var(--mode-color, #f7eeff) 72%, #ffffff);
+}
+
+.mode-chip.shift {
+  animation: modeShift 420ms ease;
 }
 
 .sound-button.sound-on {
@@ -657,6 +692,50 @@ button {
   border-radius: 50%;
   background: rgba(201, 143, 255, 0.9);
   box-shadow: 0 0 10px rgba(159, 92, 255, 0.45);
+}
+
+.hint-list {
+  display: grid;
+  gap: 0.7rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.hint-line {
+  position: relative;
+  padding: 0 1.2rem;
+  color: var(--muted);
+}
+
+.hint-line::before {
+  content: "";
+  position: absolute;
+  top: 0.45rem;
+  left: 0;
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 50%;
+  background: rgba(125, 255, 184, 0.95);
+  box-shadow: 0 0 12px rgba(125, 255, 184, 0.45);
+}
+
+.hint-line::after {
+  content: "";
+  position: absolute;
+  top: 0.45rem;
+  right: 0;
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 50%;
+  background: rgba(125, 255, 184, 0.95);
+  box-shadow: 0 0 12px rgba(125, 255, 184, 0.45);
+}
+
+.hint-list p::before,
+.hint-list p::after,
+.hint-line p::before,
+.hint-line p::after {
+  content: none;
 }
 
 .settings-list {
@@ -991,6 +1070,21 @@ button {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@keyframes modeShift {
+  0% {
+    transform: scale(0.96);
+    filter: brightness(0.96);
+  }
+  45% {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
   }
 }
 
