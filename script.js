@@ -583,6 +583,10 @@ function handleKeyPress(key) {
     return;
   }
 
+  if (!guesses[currentRow]) {
+    return;
+  }
+
   if (key === "ENTER") {
     submitGuess();
     return;
@@ -792,15 +796,15 @@ document.addEventListener("keyup", (event) => {
     backHoldTriggered = false;
   }
 });
-restartButton.addEventListener("click", () => {
+restartButton?.addEventListener("click", () => {
   startGame();
   playChord([330, 440, 587], 0.16, "triangle", 0.018);
 });
-helpButton.addEventListener("click", openHelpModal);
-howToTab.addEventListener("click", () => setHelpTab("how-to"));
-controlsTab.addEventListener("click", () => setHelpTab("controls"));
-settingsButton.addEventListener("click", openSettingsModal);
-soundToggle.addEventListener("change", async () => {
+helpButton?.addEventListener("click", openHelpModal);
+howToTab?.addEventListener("click", () => setHelpTab("how-to"));
+controlsTab?.addEventListener("click", () => setHelpTab("controls"));
+settingsButton?.addEventListener("click", openSettingsModal);
+soundToggle?.addEventListener("change", async () => {
   soundEnabled = soundToggle.checked;
   saveSoundPreference();
   if (soundEnabled) {
@@ -809,21 +813,21 @@ soundToggle.addEventListener("change", async () => {
   }
   syncSettingsUI();
 });
-closeHelpButton.addEventListener("click", closeHelpModal);
-closeSettingsButton.addEventListener("click", closeSettingsModal);
-keyboardToggle.addEventListener("change", () => {
+closeHelpButton?.addEventListener("click", closeHelpModal);
+closeSettingsButton?.addEventListener("click", closeSettingsModal);
+keyboardToggle?.addEventListener("change", () => {
   keyboardVisible = keyboardToggle.checked;
   saveKeyboardPreference();
   applyKeyboardVisibility();
   syncKeyboardScale();
 });
-hintButton.addEventListener("click", showHint);
-helpModal.addEventListener("click", (event) => {
+hintButton?.addEventListener("click", showHint);
+helpModal?.addEventListener("click", (event) => {
   if (event.target instanceof HTMLElement && event.target.dataset.closeModal === "true") {
     closeHelpModal();
   }
 });
-settingsModal.addEventListener("click", (event) => {
+settingsModal?.addEventListener("click", (event) => {
   if (event.target instanceof HTMLElement && event.target.dataset.closeSettings === "true") {
     closeSettingsModal();
   }
@@ -840,7 +844,9 @@ resizeObserver = new ResizeObserver(() => {
   syncKeyboardScale();
 });
 resizeObserver.observe(boardElement);
-resizeObserver.observe(keyboardPanelElement);
+if (keyboardPanelElement) {
+  resizeObserver.observe(keyboardPanelElement);
+}
 window.addEventListener("resize", () => {
   syncBoardScale();
   syncKeyboardScale();
