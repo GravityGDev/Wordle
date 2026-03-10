@@ -487,6 +487,12 @@ input {
   justify-items: center;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .keyboard-panel {
+    display: none;
+  }
+}
+
 .modal.hidden,
 .hint-panel.hidden {
   display: none;
