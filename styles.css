@@ -151,69 +151,143 @@ button {
   height: 0.95rem;
   border-radius: 0.18rem;
   box-shadow: none;
+  animation: confettiLaunch 1200ms cubic-bezier(0.18, 0.78, 0.24, 1) forwards;
 }
 
 .background-glow {
   position: absolute;
   inset: auto;
-  width: min(32vw, 16rem);
-  height: min(32vw, 16rem);
+  width: min(36vw, 18rem);
+  height: min(36vw, 18rem);
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.16;
+  filter: blur(100px);
+  opacity: 0.14;
   pointer-events: none;
   z-index: -1;
-  animation: floatGlow 8s ease-in-out infinite alternate;
+  animation: floatGlow 12s ease-in-out infinite alternate;
 }
 
 .background-glow-left {
-  top: 2rem;
-  left: -2rem;
-  background: rgba(159, 92, 255, 0.2);
+  top: 1rem;
+  left: -3rem;
+  background: rgba(159, 92, 255, 0.18);
 }
 
 .background-glow-right {
-  right: -2rem;
-  bottom: 12%;
-  background: rgba(111, 44, 255, 0.18);
-  animation-delay: 1.4s;
+  right: -3rem;
+  bottom: 10%;
+  background: rgba(111, 44, 255, 0.15);
+  animation-delay: 2.2s;
 }
 
 .background-orb {
   position: fixed;
   border-radius: 50%;
   pointer-events: none;
-  filter: blur(8px);
-  opacity: 0.22;
+  filter: blur(10px);
+  opacity: 0.2;
   z-index: -1;
-  animation: driftOrb 18s ease-in-out infinite;
+  mix-blend-mode: screen;
+  animation: driftOrb 22s ease-in-out infinite;
   will-change: transform, opacity;
+  --orb-x1: 1.2rem;
+  --orb-y1: -0.8rem;
+  --orb-x2: -1rem;
+  --orb-y2: 1.1rem;
+  --orb-x3: 0.7rem;
+  --orb-y3: 0.6rem;
 }
 
 .orb-one {
-  width: 6rem;
-  height: 6rem;
-  top: 22%;
-  left: 8%;
-  background: radial-gradient(circle, rgba(201, 143, 255, 0.7), transparent 70%);
+  width: 7rem;
+  height: 7rem;
+  top: 18%;
+  left: 6%;
+  background: radial-gradient(circle, rgba(201, 143, 255, 0.62), transparent 72%);
+  --orb-x1: 1.8rem;
+  --orb-y1: -1.2rem;
+  --orb-x2: -1.4rem;
+  --orb-y2: 1.6rem;
+  --orb-x3: 0.9rem;
+  --orb-y3: 1rem;
 }
 
 .orb-two {
-  width: 9rem;
-  height: 9rem;
-  right: 10%;
-  top: 38%;
-  background: radial-gradient(circle, rgba(111, 44, 255, 0.55), transparent 72%);
-  animation-delay: 3s;
+  width: 10rem;
+  height: 10rem;
+  right: 8%;
+  top: 30%;
+  background: radial-gradient(circle, rgba(111, 44, 255, 0.46), transparent 74%);
+  animation-delay: 3.4s;
+  --orb-x1: -1.5rem;
+  --orb-y1: -1.6rem;
+  --orb-x2: 1.3rem;
+  --orb-y2: 1.5rem;
+  --orb-x3: -0.8rem;
+  --orb-y3: 0.9rem;
 }
 
 .orb-three {
-  width: 7rem;
-  height: 7rem;
-  left: 24%;
-  bottom: 12%;
-  background: radial-gradient(circle, rgba(99, 230, 190, 0.28), transparent 72%);
-  animation-delay: 6s;
+  width: 7.5rem;
+  height: 7.5rem;
+  left: 22%;
+  bottom: 10%;
+  background: radial-gradient(circle, rgba(99, 230, 190, 0.24), transparent 74%);
+  animation-delay: 6.2s;
+  --orb-x1: 1.2rem;
+  --orb-y1: 1.3rem;
+  --orb-x2: -1.6rem;
+  --orb-y2: -1rem;
+  --orb-x3: 1rem;
+  --orb-y3: -0.8rem;
+}
+
+.orb-four {
+  width: 5.5rem;
+  height: 5.5rem;
+  right: 20%;
+  bottom: 18%;
+  background: radial-gradient(circle, rgba(139, 233, 255, 0.22), transparent 72%);
+  animation-delay: 1.6s;
+  animation-duration: 26s;
+  --orb-x1: -1.1rem;
+  --orb-y1: 1.5rem;
+  --orb-x2: 1.7rem;
+  --orb-y2: -1.2rem;
+  --orb-x3: -0.9rem;
+  --orb-y3: -0.7rem;
+}
+
+.orb-five {
+  width: 4.75rem;
+  height: 4.75rem;
+  left: 38%;
+  top: 16%;
+  background: radial-gradient(circle, rgba(255, 209, 102, 0.14), transparent 70%);
+  animation-delay: 4.8s;
+  animation-duration: 24s;
+  --orb-x1: 0.9rem;
+  --orb-y1: -1.5rem;
+  --orb-x2: -1.1rem;
+  --orb-y2: 1.2rem;
+  --orb-x3: 1.4rem;
+  --orb-y3: 0.5rem;
+}
+
+.orb-six {
+  width: 8.5rem;
+  height: 8.5rem;
+  right: -1.5rem;
+  bottom: 34%;
+  background: radial-gradient(circle, rgba(167, 119, 255, 0.2), transparent 76%);
+  animation-delay: 8.4s;
+  animation-duration: 30s;
+  --orb-x1: -1.8rem;
+  --orb-y1: -1rem;
+  --orb-x2: 1.2rem;
+  --orb-y2: 1.8rem;
+  --orb-x3: -1rem;
+  --orb-y3: 0.9rem;
 }
 
 .game {
@@ -468,6 +542,7 @@ button {
   grid-template-columns: repeat(var(--board-cols, 5), calc(var(--tile-size) * var(--round-tile-scale)));
   gap: calc(var(--tile-gap) * var(--round-gap-scale));
   justify-self: center;
+  --spot-x: 0px;
 }
 
 .board-row.current-row {
@@ -477,19 +552,22 @@ button {
 .board-row.current-row::before {
   content: "";
   position: absolute;
-  left: -0.4rem;
-  right: -0.4rem;
+  left: -0.18rem;
   top: 50%;
-  height: 0.5rem;
-  transform: translateY(-50%);
-  background: linear-gradient(90deg, transparent, rgba(201, 143, 255, 0.16), transparent);
-  opacity: 0;
+  width: calc((var(--tile-size) * var(--round-tile-scale)) + 0.36rem);
+  height: calc((var(--tile-size) * var(--round-tile-scale)) + 1rem);
+  transform: translate3d(var(--spot-x), -50%, 0);
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(201, 143, 255, 0.34), rgba(201, 143, 255, 0.16) 52%, rgba(201, 143, 255, 0.04) 72%, transparent 84%);
+  opacity: 0.92;
   pointer-events: none;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
+  filter: blur(4px);
 }
 
 .game.input-active .board-row.current-row::before {
   opacity: 1;
-  animation: inputTrail 700ms ease;
 }
 
 .board-row.ready-submit::before {
@@ -530,6 +608,8 @@ button {
 }
 
 .tile {
+  position: relative;
+  overflow: hidden;
   width: calc(var(--tile-size) * var(--round-tile-scale));
   height: calc(var(--tile-size) * var(--round-tile-scale));
   border-radius: 1rem;
@@ -548,6 +628,18 @@ button {
   transform-style: preserve-3d;
   will-change: transform;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.tile.current-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, transparent 18%, rgba(255, 255, 255, 0.18) 42%, rgba(255, 255, 255, 0.06) 58%, transparent 78%);
+  transform: translateX(-135%) skewX(-18deg);
+  opacity: 0.78;
+  pointer-events: none;
+  animation: activeTileShimmer 2.2s ease-in-out infinite;
 }
 
 .tile.filled {
@@ -667,18 +759,64 @@ button {
     linear-gradient(180deg, rgba(36, 20, 58, 0.98), rgba(18, 10, 31, 0.98));
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
   animation: modalRise 260ms ease;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 143, 255, 0.55) rgba(255, 255, 255, 0.06);
+}
+
+.modal-card::-webkit-scrollbar {
+  width: 0.7rem;
+}
+
+.modal-card::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
+
+.modal-card::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(201, 143, 255, 0.8), rgba(111, 44, 255, 0.8));
+  border-radius: 999px;
+  border: 2px solid rgba(24, 12, 40, 0.95);
+}
+
+.modal-card::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(220, 174, 255, 0.92), rgba(132, 64, 255, 0.92));
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.55rem;
 }
 
 .modal-close {
-  position: absolute;
-  top: 0.85rem;
-  right: 0.85rem;
   border: 0;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
   border-radius: 999px;
   padding: 0.55rem 0.85rem;
   cursor: pointer;
+}
+
+.modal-cache-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 143, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.modal-cache-chip-ghost {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .modal-eyebrow {
@@ -1111,18 +1249,44 @@ body.high-contrast .modal-card {
   }
 }
 
+@keyframes confettiLaunch {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.72);
+  }
+  10% {
+    opacity: 1;
+  }
+  35% {
+    opacity: 1;
+    transform: translate3d(calc(var(--dx) * 0.38), var(--lift), 0) rotate(var(--spin-mid)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--dx), var(--fall), 0) rotate(var(--spin-end)) scale(1.06);
+  }
+}
+
 @keyframes driftOrb {
   0% {
     transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.16;
   }
-  33% {
-    transform: translate3d(1.5rem, -1rem, 0) scale(1.12);
+  25% {
+    transform: translate3d(var(--orb-x1), var(--orb-y1), 0) scale(1.08);
+    opacity: 0.24;
   }
-  66% {
-    transform: translate3d(-1rem, 1.2rem, 0) scale(0.96);
+  50% {
+    transform: translate3d(var(--orb-x2), var(--orb-y2), 0) scale(0.94);
+    opacity: 0.18;
+  }
+  75% {
+    transform: translate3d(var(--orb-x3), var(--orb-y3), 0) scale(1.12);
+    opacity: 0.22;
   }
   100% {
-    transform: translate3d(1.5rem, -1rem, 0) scale(1.12);
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.16;
   }
 }
 
@@ -1289,6 +1453,24 @@ body.high-contrast .modal-card {
   100% {
     transform: translateY(0) scale(1);
     box-shadow: 0 0 0 1px rgba(159, 92, 255, 0.24), 0 0 24px rgba(159, 92, 255, 0.14);
+  }
+}
+
+@keyframes activeTileShimmer {
+  0%,
+  100% {
+    transform: translateX(-135%) skewX(-18deg);
+    opacity: 0.2;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  42% {
+    transform: translateX(135%) skewX(-18deg);
+    opacity: 0.55;
+  }
+  60% {
+    opacity: 0.12;
   }
 }
 

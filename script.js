@@ -48,6 +48,7 @@ const closeSettingsButton = document.getElementById("close-settings-button");
 const howToTab = document.getElementById("how-to-tab");
 const controlsTab = document.getElementById("controls-tab");
 const helpTrack = document.getElementById("help-track");
+const cacheNameChip = document.getElementById("cache-name-chip");
 const soundToggle = document.getElementById("sound-toggle");
 const keyboardToggle = document.getElementById("keyboard-toggle");
 const reducedMotionToggle = document.getElementById("reduced-motion-toggle");
@@ -242,6 +243,21 @@ function syncSettingsUI() {
   keyboardSettingItem.hidden = isTouchDevice();
 }
 
+async function loadCacheNameChip() {
+  if (!cacheNameChip) {
+    return;
+  }
+
+  try {
+    const response = await fetch("./sw.js", { cache: "no-store" });
+    const source = await response.text();
+    const match = source.match(/const\s+CACHE_NAME\s*=\s*"([^"]+)"/);
+    cacheNameChip.textContent = match?.[1] ?? "Cache";
+  } catch {
+    cacheNameChip.textContent = "Cache";
+  }
+}
+
 function queueNextRound(delay = 1800) {
   window.clearTimeout(autoAdvanceTimeout);
   autoAdvanceTimeout = window.setTimeout(() => {
@@ -269,21 +285,23 @@ function spawnParticles(target, type, count = 10) {
 
 function spawnConfetti(target, count = 20) {
   const rect = target.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const topY = rect.top + 20;
+  const baseY = rect.bottom - 12;
   const palette = ["#7dffb8", "#ffd166", "#c98fff", "#8be9ff"];
 
   for (let index = 0; index < count; index += 1) {
     const particle = document.createElement("span");
     particle.className = "particle confetti";
-    particle.style.left = `${centerX + ((Math.random() - 0.5) * rect.width)}px`;
-    particle.style.top = `${topY}px`;
+    particle.style.left = `${rect.left + (Math.random() * rect.width)}px`;
+    particle.style.top = `${baseY}px`;
     particle.style.background = palette[index % palette.length];
-    particle.style.setProperty("--dx", `${(Math.random() - 0.5) * 180}px`);
-    particle.style.setProperty("--dy", `${70 + (Math.random() * 120)}px`);
-    particle.style.transform = `rotate(${Math.random() * 360}deg)`;
+    particle.style.setProperty("--dx", `${(Math.random() - 0.5) * 200}px`);
+    particle.style.setProperty("--lift", `${-80 - (Math.random() * 90)}px`);
+    particle.style.setProperty("--fall", `${90 + (Math.random() * 150)}px`);
+    particle.style.setProperty("--spin-mid", `${-120 + (Math.random() * 240)}deg`);
+    particle.style.setProperty("--spin-end", `${-260 + (Math.random() * 520)}deg`);
+    particle.style.animationDelay = `${index * 18}ms`;
     fxLayer.appendChild(particle);
-    window.setTimeout(() => particle.remove(), 760);
+    window.setTimeout(() => particle.remove(), 1350);
   }
 }
 
@@ -695,6 +713,31 @@ function triggerRowReady(row) {
   window.setTimeout(() => rowElement.classList.remove("ready-submit"), 430);
 }
 
+function syncActiveCursor() {
+  boardElement.querySelectorAll(".board-row").forEach((rowElement) => {
+    rowElement.classList.remove("current-row", "ready-submit");
+    rowElement.style.removeProperty("--spot-x");
+    rowElement.querySelectorAll(".tile").forEach((tile) => tile.classList.remove("current-tile"));
+  });
+
+  if (gameOver || !guesses[currentRow]) {
+    return;
+  }
+
+  const rowElement = boardElement.querySelector(`.board-row[data-row="${currentRow}"]`);
+  const activeCol = Math.min(currentCol, roundConfig.length - 1);
+  const activeTile = getTile(currentRow, activeCol);
+  if (!rowElement || !activeTile) {
+    return;
+  }
+
+  rowElement.classList.add("current-row");
+  rowElement.style.setProperty("--spot-x", `${activeTile.offsetLeft}px`);
+  if (currentCol < roundConfig.length) {
+    activeTile.classList.add("current-tile");
+  }
+}
+
 function handleKeyPress(key) {
   if (gameOver || isAnimating) {
     return;
@@ -713,6 +756,7 @@ function handleKeyPress(key) {
   const liveResult = scoreGuess(guesses[currentRow].map((letter) => letter || " ").join(""));
   revealTypedLetter(currentRow, currentCol, key, liveResult[currentCol]);
   currentCol += 1;
+  syncActiveCursor();
   if (currentCol === roundConfig.length) {
     triggerRowReady(currentRow);
     setMessage("Locked in...");
@@ -728,9 +772,9 @@ function handleKeyPress(key) {
 function updateRowStateClasses() {
   boardElement.querySelectorAll(".board-row").forEach((rowElement) => {
     const rowNumber = Number(rowElement.dataset.row);
-    rowElement.classList.toggle("current-row", rowNumber === currentRow && !gameOver);
     rowElement.classList.toggle("settled", rowNumber < currentRow);
   });
+  syncActiveCursor();
 }
 
 function scoreGuess(guess) {
@@ -987,6 +1031,7 @@ startGame();
 applyKeyboardVisibility();
 updateA11yModes();
 syncSettingsUI();
+void loadCacheNameChip();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

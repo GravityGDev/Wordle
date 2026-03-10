@@ -1,4 +1,4 @@
-const CACHE_NAME = "wordle-gravityg-v3.8";
+const CACHE_NAME = "v4.1";
 const ASSETS = [
   "./",
   "./index.html",
