@@ -42,6 +42,15 @@
 }
 
 html,
+body,
+button,
+.game,
+.game * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html,
 body {
   margin: 0;
   min-height: 100%;
@@ -199,6 +208,7 @@ button {
 }
 
 .topbar,
+.brand-panel,
 .control-panel,
 .board-panel,
 .keyboard-panel {
@@ -209,6 +219,14 @@ button {
   backdrop-filter: blur(20px);
   box-shadow: var(--shadow);
   overflow: hidden;
+}
+
+.brand-panel {
+  padding: 0.4rem 0 0.25rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .topbar {
@@ -257,6 +275,9 @@ button {
   width: min(100%, 10rem);
   height: auto;
   margin: 0 auto;
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
 }
 
 .subtitle {
@@ -692,6 +713,15 @@ button {
   border-radius: 50%;
   background: rgba(201, 143, 255, 0.9);
   box-shadow: 0 0 10px rgba(159, 92, 255, 0.45);
+}
+
+#hint-text {
+  padding-left: 0;
+}
+
+#hint-text::before,
+#hint-text::after {
+  content: none;
 }
 
 .hint-list {

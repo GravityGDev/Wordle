@@ -867,6 +867,9 @@ document.addEventListener("keydown", (event) => {
     closeSettingsModal();
   }
 });
+document.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+});
 
 resizeObserver = new ResizeObserver(() => {
   syncBoardScale();
