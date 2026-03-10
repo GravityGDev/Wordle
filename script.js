@@ -315,20 +315,25 @@ function syncKeyboardScale() {
   const baseKey = 64;
   const baseHeight = 52;
   const baseGap = 7.2;
-  const largestRowUnits = Math.max(
-    ...keyboardLayout.map((row) => row.reduce((units, key) => units + (key === "ENTER" || key === "BACK" ? 1.5 : 1), 0))
+  const largestRowWidth = Math.max(
+    ...keyboardLayout.map((row) => {
+      const units = row.reduce((sum, key) => sum + (key === "ENTER" || key === "BACK" ? 1.5 : 1), 0);
+      return (units * baseKey) + ((row.length - 1) * baseGap);
+    })
   );
-  const largestRowWidth = (largestRowUnits * baseKey) + ((keyboardLayout[0].length - 1) * baseGap);
 
   if (!availableWidth || !largestRowWidth) {
     return;
   }
 
   const fittedScale = Math.min(1, availableWidth / largestRowWidth);
-  const keyWidth = Math.max(34, baseKey * fittedScale);
-  const keyHeight = Math.max(30, baseHeight * fittedScale);
-  const keyGap = Math.max(3, baseGap * fittedScale);
-  const rowGap = Math.max(4, 8.8 * fittedScale);
+  const isNarrowTouch = window.matchMedia("(pointer: coarse) and (max-width: 480px)").matches;
+  const minKeyWidth = isNarrowTouch ? 26 : 30;
+  const minKeyHeight = isNarrowTouch ? 24 : 28;
+  const keyWidth = Math.max(minKeyWidth, baseKey * fittedScale);
+  const keyHeight = Math.max(minKeyHeight, baseHeight * fittedScale);
+  const keyGap = Math.max(2, baseGap * fittedScale);
+  const rowGap = Math.max(3, 8.8 * fittedScale);
 
   keyboardElement.style.setProperty("--keyboard-key", `${keyWidth}px`);
   keyboardElement.style.setProperty("--key-height", `${keyHeight}px`);

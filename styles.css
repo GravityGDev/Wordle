@@ -1154,6 +1154,12 @@ input {
   :root {
     --tile-size: 3rem;
   }
+
+  .keyboard-panel {
+    padding-left: 0.55rem;
+    padding-right: 0.55rem;
+  }
+
   .status-row {
     margin-bottom: 0.3rem;
   }
