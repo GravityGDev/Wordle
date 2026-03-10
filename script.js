@@ -54,6 +54,7 @@ const keyboardLayout = [
 ];
 
 const boardElement = document.getElementById("board");
+const boardPanelElement = document.querySelector(".board-panel");
 const keyboardPanelElement = document.querySelector(".keyboard-panel");
 const keyboardElement = document.getElementById("keyboard");
 const fxLayer = document.getElementById("fx-layer");
@@ -395,22 +396,33 @@ function updateModeChipTheme() {
 }
 
 function syncBoardScale() {
+  if (!boardPanelElement) {
+    return;
+  }
+
   const styles = window.getComputedStyle(boardElement);
+  const panelStyles = window.getComputedStyle(boardPanelElement);
   const baseTile = parseFloat(styles.getPropertyValue("--tile-size"));
   const baseGap = parseFloat(styles.getPropertyValue("--tile-gap"));
   if (!baseTile || !baseGap) {
     return;
   }
 
-  const availableWidth = boardElement.clientWidth;
-  const availableHeight = boardElement.clientHeight;
+  const panelPaddingX = parseFloat(panelStyles.paddingLeft) + parseFloat(panelStyles.paddingRight);
+  const panelPaddingY = parseFloat(panelStyles.paddingTop) + parseFloat(panelStyles.paddingBottom);
+  const statusHeight = boardPanelElement.querySelector(".status-row")?.offsetHeight ?? 0;
+  const availableWidth = Math.max(0, boardPanelElement.clientWidth - panelPaddingX - 4);
+  const availableHeight = Math.max(0, boardPanelElement.clientHeight - panelPaddingY - statusHeight - 8);
   if (!availableWidth || !availableHeight) {
     return;
   }
 
-  const widthScale = (availableWidth + baseGap) / ((roundConfig.length * baseTile) + ((roundConfig.length - 1) * baseGap));
-  const heightScale = (availableHeight + baseGap) / ((roundConfig.guesses * baseTile) + ((roundConfig.guesses - 1) * baseGap));
-  const tileScale = Math.max(0.72, Math.min(widthScale, heightScale));
+  const boardWidth = (roundConfig.length * baseTile) + ((roundConfig.length - 1) * baseGap);
+  const boardHeight = (roundConfig.guesses * baseTile) + ((roundConfig.guesses - 1) * baseGap);
+  const widthScale = (availableWidth + baseGap) / (boardWidth + baseGap);
+  const heightScale = (availableHeight + baseGap) / (boardHeight + baseGap);
+  const minScale = window.matchMedia("(pointer: coarse) and (max-width: 540px)").matches ? 0.56 : 0.72;
+  const tileScale = Math.max(minScale, Math.min(widthScale, heightScale, 1.24));
   const gapScale = Math.max(0.72, Math.min(1.08, tileScale * 0.94));
 
   boardElement.style.setProperty("--round-tile-scale", `${tileScale}`);
