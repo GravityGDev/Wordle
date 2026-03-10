@@ -254,7 +254,7 @@ button {
 
 .brand-logo {
   display: block;
-  width: min(100%, 16rem);
+  width: min(100%, 10rem);
   height: auto;
   margin: 0 auto;
 }
